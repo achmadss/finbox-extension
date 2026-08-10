@@ -22,8 +22,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 class FinboxExtensionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
+            // AGP 9 has built-in Kotlin support; no kotlin.android plugin needed.
             pluginManager.apply("com.android.application")
-            pluginManager.apply("org.jetbrains.kotlin.android")
 
             val finbox = extensions.create<FinboxExtension>("finbox")
 
@@ -54,10 +54,8 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 }
             }
 
-            extensions.configure<KotlinAndroidProjectExtension> {
-                compilerOptions {
-                    jvmTarget.set(JvmTarget.JVM_11)
-                }
+            extensions.findByType(KotlinAndroidProjectExtension::class.java)?.compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_11)
             }
 
             val generateManifest = tasks.register("generateFinboxManifest") {

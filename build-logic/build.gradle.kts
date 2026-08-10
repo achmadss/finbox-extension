@@ -5,8 +5,8 @@ plugins {
 
 dependencies {
     compileOnly(gradleKotlinDsl())
-    compileOnly("com.android.tools.build:gradle:8.12.1")
-    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.10")
+    compileOnly("com.android.tools.build:gradle:9.3.1")
+    compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10")
 }
 
 gradlePlugin {
