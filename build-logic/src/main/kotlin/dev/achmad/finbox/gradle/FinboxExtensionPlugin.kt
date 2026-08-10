@@ -125,6 +125,9 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 <meta-data
                     android:name="finbox.extension.version_code"
                     android:value="${finbox.versionCode}" />
+                <meta-data
+                    android:name="finbox.extension.version_name"
+                    android:value="${finbox.versionName()}" />
             </application>
         </manifest>
     """.trimIndent()
