@@ -1,0 +1,14 @@
+{
+  "extensions": [
+    {
+      "name": "Bank BRI",
+      "provider": "bri",
+      "pkg": "dev.achmad.finbox.extension.bri",
+      "version_code": 1,
+      "version_name": "1.0.1",
+      "lib_version": "1.0",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.0.1.apk",
+      "sha256": "d3d612ec4196b72c8e96db12920020a862ffd781782dd634d35ee390f8c7f7b6"
+    }
+  ]
+}
