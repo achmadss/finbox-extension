@@ -1,9 +1,10 @@
 # finbox-extension
 
-Parser extensions for [finbox-android](https://github.com/achmadss/finbox-android),
-the email transaction importer. Each extension is a small Android APK that
-recognizes one financial provider's emails and converts them into a
-standardized transaction format. No launcher activity; loaded in-process by the
+Sources for [finbox-android](https://github.com/achmadss/finbox-android), the
+email transaction importer. Each extension is a small Android APK holding one
+source — BRI, Jago, Gojek — which tells the app which emails to fetch,
+confirms the ones that are really transactions, and converts them into a
+standardized format. No launcher activity; loaded in-process by the
 app via a child-first classloader.
 
 ## Layout
@@ -11,12 +12,12 @@ app via a child-first classloader.
 | Path | Purpose |
 |---|---|
 | `build-logic/` | `finbox.plugins.extension` Gradle plugin (manifest generation, versioning, APK copy) |
-| `compiler/` | KSP processor turning the module's `@Parser` class into the generated entry point |
+| `compiler/` | KSP processor turning the module's `@Source` class into the generated entry point |
 | `extensions/<provider>/` | One module per provider (bri, jago, bca, gopay, ...) |
 | `repo/` | Published artifacts: APKs + `index.json` served to the app |
 | `tools/` | `update-repo.py` (index generation), `publish.sh` (build + index) |
 
-## Adding a parser
+## Adding a source
 
 1. `mkdir extensions/<provider>` with `build.gradle.kts`:
 
@@ -30,36 +31,44 @@ app via a child-first classloader.
    }
    ```
 
-2. Implement `dev.achmad.finbox.extension.TransactionParser` in package
-   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Parser`:
+2. Implement `dev.achmad.finbox.extension.TransactionSource` in package
+   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Source`:
 
    ```kotlin
-   @Parser
-   class BriParser : TransactionParser {
+   @Source
+   class BriSource : TransactionSource {
+       override val emailQuery = EmailQuery(from = listOf("bri.co.id"))
        override fun isEmailForProvider(email: EmailMessage): Boolean { /* ... */ }
        override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> { /* ... */ }
    }
    ```
 
-   Behaviour only — the parser carries no name, version or id. The `:compiler`
-   KSP processor generates `GeneratedParser`, a delegate with a fixed name that
+   `emailQuery` is what the app asks Gmail for — narrow it to the provider's
+   senders, and never put dates in it: the app adds the import window the user
+   chose. It only decides what gets *downloaded*. `isEmailForProvider` then
+   decides what is actually a transaction, because a bank sends statements,
+   OTPs and promos from the same address. A source declaring an empty query is
+   rejected at load, since it would pull the whole mailbox.
+
+   Behaviour only — the source carries no name, version or id. The `:compiler`
+   KSP processor generates `GeneratedSource`, a delegate with a fixed name that
    the manifest's `finbox.extension.class` points at; the app takes the identity
    from the manifest instead (id is `MD5("name.lowercase()/versionCode")`,
    stable across releases so stored transactions keep matching).
 
-   Exactly one `@Parser` class per module — one provider per APK. Getting this
+   Exactly one `@Source` class per module — one provider per APK. Getting this
    wrong (missing annotation, two of them, abstract class, constructor
    arguments) is a build error rather than a load failure on someone's phone.
 3. Register the module in `settings.gradle.kts`.
 
-## The parser API
+## The source API
 
-`TransactionParser`, `EmailMessage` and `ParsedTransaction` come from
+`TransactionSource`, `EmailQuery`, `EmailMessage` and `ParsedTransaction` come from
 finbox-android's `:extension-api`, published via JitPack and pinned in
 `gradle.properties`:
 
 ```properties
-finbox.apiVersion=1.0
+finbox.apiVersion=1.1
 ```
 
 The plugin adds it as `compileOnly` — the app supplies the real classes at
@@ -90,7 +99,7 @@ finbox-android builds the API with, or its metadata is unreadable here.
 
 Plain JUnit on the JVM. Everything the plugin declares `compileOnly` is a real
 `testImplementation` dependency, since tests run without the app to supply it.
-KSP is disabled for test compilations — the `@Parser` class lives in `main`.
+KSP is disabled for test compilations — the `@Source` class lives in `main`.
 
 ## Versioning
 
@@ -117,7 +126,8 @@ against its `sha256` before installing. Bump `versionCode` in the module's
 
 ## libVersion
 
-`finbox.extension.lib` in the manifest must be `1.0` (checked by the app's
-loader, which rejects unknown versions with a clear error). Bump it only when
-the parser API in `core/` changes incompatibly — the app must ship the matching
-version too.
+`finbox.extension.lib` in the manifest must be `1.1` (checked by the app's
+loader, which rejects unknown versions with a clear error). It comes from
+`finbox.apiVersion`; bump both only when the source API changes incompatibly —
+the app must ship the matching version too. 1.0 → 1.1 was such a change:
+`TransactionParser` became `TransactionSource` and gained `emailQuery`.

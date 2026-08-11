@@ -11,9 +11,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class BriParserTest {
+class BriSourceTest {
 
-    private val parser = BriParser()
+    private val source = BriSource()
 
     private fun email(
         body: String = "",
@@ -41,13 +41,27 @@ class BriParserTest {
         SALDO : Rp5.000.000,00
     """.trimIndent()
 
-    private fun parse(body: String) = runBlocking { parser.parseEmail(email(body = body)) }
+    private fun parse(body: String) = runBlocking { source.parseEmail(email(body = body)) }
 
     @Test
-    fun `recognizes its own emails by sender or subject`() {
-        assertTrue(parser.isEmailForProvider(email(from = "noreply@bri.co.id", subject = "apa saja")))
-        assertTrue(parser.isEmailForProvider(email(from = "someone@example.com", subject = "Transaksi BRI")))
-        assertFalse(parser.isEmailForProvider(email(from = "noreply@bca.co.id", subject = "Notifikasi")))
+    fun `asks gmail for bri mail only`() {
+        val query = source.emailQuery
+
+        assertFalse(query.isEmpty)
+        assertEquals(listOf("bri.co.id"), query.from)
+    }
+
+    @Test
+    fun `confirms only transaction mail from the bri domain`() {
+        // The query already restricts the sender; this rejects what BRI sends
+        // from the same address that isn't a transaction.
+        assertTrue(source.isEmailForProvider(email(from = "noreply@bri.co.id", body = notification)))
+        assertFalse(
+            source.isEmailForProvider(
+                email(from = "noreply@bri.co.id", subject = "Promo BRI", body = "Diskon 50% untuk Anda"),
+            ),
+        )
+        assertFalse(source.isEmailForProvider(email(from = "noreply@bca.co.id", body = notification)))
     }
 
     @Test
@@ -125,7 +139,7 @@ class BriParserTest {
     fun `falls back to the html body when there is no plain text`() {
         val html = "<html><body><p>TANGGAL : 26/01/2026 10:30:12</p>" +
             "<p>JUMLAH : Rp1.000.000,00</p></body></html>"
-        val tx = runBlocking { parser.parseEmail(email(html = html)) }.single()
+        val tx = runBlocking { source.parseEmail(email(html = html)) }.single()
 
         assertEquals(1_000_000L, tx.amount)
     }

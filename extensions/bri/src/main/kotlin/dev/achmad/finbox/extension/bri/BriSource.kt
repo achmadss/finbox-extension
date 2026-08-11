@@ -1,15 +1,16 @@
 package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
+import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
-import dev.achmad.finbox.extension.Parser
-import dev.achmad.finbox.extension.TransactionParser
+import dev.achmad.finbox.extension.Source
+import dev.achmad.finbox.extension.TransactionSource
 import dev.achmad.finbox.extension.TransactionType
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Parser for Bank BRI transaction notification emails.
+ * Source for Bank BRI transaction notification emails.
  *
  * Typical body:
  * ```
@@ -21,16 +22,25 @@ import java.time.ZoneId
  * SALDO : Rp5.000.000,00
  * ```
  *
- * The parser is deliberately tolerant: it returns an empty list (email goes
- * to the unrecognized queue) whenever amount or date cannot be extracted.
+ * Parsing is deliberately tolerant: it returns an empty list whenever amount
+ * or date cannot be extracted, and the app drops the email.
  */
-@Parser
-class BriParser : TransactionParser {
+@Source
+class BriSource : TransactionSource {
+
+    // Everything BRI sends, narrowed to the sending domain. The app adds the
+    // import window; isEmailForProvider throws away the statements, OTPs and
+    // promos that come back with the notifications.
+    override val emailQuery = EmailQuery(
+        from = listOf("bri.co.id"),
+    )
 
     override fun isEmailForProvider(email: EmailMessage): Boolean {
         val from = email.from.lowercase()
-        val subject = email.subject.lowercase()
-        return "bri.co.id" in from || "bri" in subject
+        if ("bri.co.id" !in from) return false
+        val text = email.bodyText.ifBlank { email.bodyHtml }
+        // A transaction mail always states an amount and a date.
+        return "jumlah" in text.lowercase() && "tanggal" in text.lowercase()
     }
 
     override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> {

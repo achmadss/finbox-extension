@@ -11,7 +11,7 @@ package dev.achmad.finbox.gradle
  * }
  * ```
  *
- * The parser class is not named here: annotate it with `@Parser` and the
+ * The parser class is not named here: annotate it with `@Source` and the
  * `:compiler` KSP processor generates the entry point the manifest points at.
  */
 open class FinboxExtension {

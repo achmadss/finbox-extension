@@ -13,15 +13,15 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 
-private const val PARSER_ANNOTATION = "dev.achmad.finbox.extension.Parser"
-private const val TRANSACTION_PARSER = "dev.achmad.finbox.extension.TransactionParser"
+private const val SOURCE_ANNOTATION = "dev.achmad.finbox.extension.Source"
+private const val TRANSACTION_SOURCE = "dev.achmad.finbox.extension.TransactionSource"
 
 /** Must match GENERATED_CLASS in FinboxExtensionPlugin, which puts it in the manifest. */
 private const val GENERATED_PACKAGE = "dev.achmad.finbox.extension.generated"
-private const val GENERATED_CLASS = "GeneratedParser"
+private const val GENERATED_CLASS = "GeneratedSource"
 
 /**
- * Re-exports the single `@Parser` parser in an extension module under a fixed,
+ * Re-exports the single `@Source` class in an extension module under a fixed,
  * predictable name.
  *
  * The indirection is what lets `finbox { }` drop `className`: the manifest can
@@ -29,7 +29,7 @@ private const val GENERATED_CLASS = "GeneratedParser"
  * exists. It also moves what used to be a runtime failure — a typo'd class name
  * surfacing as "Failed to instantiate" on the user's phone — to a build error.
  */
-class ParserProcessor(
+class SourceProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
 ) : SymbolProcessor {
@@ -40,22 +40,22 @@ class ParserProcessor(
         if (invoked) return emptyList()
         invoked = true
 
-        val annotated = resolver.getSymbolsWithAnnotation(PARSER_ANNOTATION)
+        val annotated = resolver.getSymbolsWithAnnotation(SOURCE_ANNOTATION)
             .filterIsInstance<KSClassDeclaration>()
             .toList()
 
         val decl = when {
             annotated.isEmpty() -> {
                 logger.error(
-                    "No @Parser class found. Annotate this extension's entry point with " +
-                        "@dev.achmad.finbox.extension.Parser.",
+                    "No @Source class found. Annotate this extension's entry point with " +
+                        "@dev.achmad.finbox.extension.Source.",
                 )
                 return emptyList()
             }
             annotated.size > 1 -> {
                 val names = annotated.joinToString { it.qualifiedName?.asString().orEmpty() }
                 logger.error(
-                    "Exactly one @Parser class is allowed per extension, found ${annotated.size}: $names.",
+                    "Exactly one @Source class is allowed per extension, found ${annotated.size}: $names.",
                     annotated.first(),
                 )
                 return emptyList()
@@ -63,27 +63,27 @@ class ParserProcessor(
             else -> annotated.single()
         }
 
-        val isParser = decl.getAllSuperTypes()
-            .any { it.declaration.qualifiedName?.asString() == TRANSACTION_PARSER }
-        if (!isParser) {
-            logger.error("@Parser class must implement TransactionParser.", decl)
+        val isSource = decl.getAllSuperTypes()
+            .any { it.declaration.qualifiedName?.asString() == TRANSACTION_SOURCE }
+        if (!isSource) {
+            logger.error("@Source class must implement TransactionSource.", decl)
             return emptyList()
         }
         if (decl.classKind != ClassKind.CLASS && decl.classKind != ClassKind.OBJECT) {
-            logger.error("@Parser must be on a class or object, not a ${decl.classKind}.", decl)
+            logger.error("@Source must be on a class or object, not a ${decl.classKind}.", decl)
             return emptyList()
         }
         if (Modifier.ABSTRACT in decl.modifiers) {
-            logger.error("@Parser class must be concrete; the app instantiates it reflectively.", decl)
+            logger.error("@Source class must be concrete; the app instantiates it reflectively.", decl)
             return emptyList()
         }
         if (decl.primaryConstructor?.parameters?.isNotEmpty() == true) {
-            logger.error("@Parser class must have a no-argument constructor.", decl)
+            logger.error("@Source class must have a no-argument constructor.", decl)
             return emptyList()
         }
 
         val fqn = decl.qualifiedName?.asString() ?: run {
-            logger.error("@Parser class must be top-level and named.", decl)
+            logger.error("@Source class must be top-level and named.", decl)
             return emptyList()
         }
 
@@ -97,12 +97,12 @@ class ParserProcessor(
         ).bufferedWriter().use { out ->
             out.write(
                 """
-                |// Generated from @Parser on $fqn. Do not edit.
+                |// Generated from @Source on $fqn. Do not edit.
                 |package $GENERATED_PACKAGE
                 |
-                |import dev.achmad.finbox.extension.TransactionParser
+                |import dev.achmad.finbox.extension.TransactionSource
                 |
-                |class $GENERATED_CLASS : TransactionParser by $instance
+                |class $GENERATED_CLASS : TransactionSource by $instance
                 |
                 """.trimMargin(),
             )
@@ -112,7 +112,7 @@ class ParserProcessor(
     }
 }
 
-class ParserProcessorProvider : SymbolProcessorProvider {
+class SourceProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
-        ParserProcessor(environment.codeGenerator, environment.logger)
+        SourceProcessor(environment.codeGenerator, environment.logger)
 }
