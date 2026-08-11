@@ -7,6 +7,8 @@ pluginManagement {
     plugins {
         id("com.android.library") version "9.3.1"
         id("com.android.application") version "9.3.1"
+        id("org.jetbrains.kotlin.jvm") version "2.4.10"
+        id("com.google.devtools.ksp") version "2.3.9"
     }
 }
 
@@ -26,4 +28,5 @@ rootProject.name = "finbox-extension"
 
 includeBuild("build-logic")
 
+include(":compiler")
 include(":extensions:bri")

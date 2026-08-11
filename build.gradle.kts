@@ -15,4 +15,8 @@ buildscript {
 plugins {
     id("com.android.application") version "9.3.1" apply false
     id("com.android.library") version "9.3.1" apply false
+    // Not applied here; on the classpath so the finbox.plugins.extension plugin
+    // can apply it to each extension module. Versions come from settings.
+    id("org.jetbrains.kotlin.jvm") apply false
+    id("com.google.devtools.ksp") apply false
 }
