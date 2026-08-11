@@ -11,7 +11,6 @@ app via a child-first classloader.
 | Path | Purpose |
 |---|---|
 | `build-logic/` | `finbox.plugins.extension` Gradle plugin (manifest generation, versioning, APK copy) |
-| `core/` | Parser API stubs (`compileOnly`): `TransactionSource`, `SourceFactory`, `EmailMessage`, `ParsedTransaction` — **keep in sync** with `:extension-api` in finbox-android |
 | `extensions/<provider>/` | One module per provider (bri, jago, bca, gopay, ...) |
 | `repo/` | Published artifacts: APKs + `index.json` served to the app |
 | `tools/` | `update-repo.py` (index generation), `publish.sh` (build + index) |
@@ -35,6 +34,32 @@ app via a child-first classloader.
    `dev.achmad.finbox.extension.<provider>`. `id` must be deterministic
    (`MD5("name.lowercase()/versionId")`, see `BriParser.sourceId`).
 3. Register the module in `settings.gradle.kts`.
+
+## The parser API
+
+`TransactionSource`, `SourceFactory`, `EmailMessage` and `ParsedTransaction`
+come from finbox-android's `:extension-api`, published via JitPack and pinned in
+`gradle.properties`:
+
+```properties
+finbox.apiVersion=1.0
+```
+
+The plugin adds it as `compileOnly` — the app supplies the real classes at
+runtime through its child-first classloader — and stamps the same value into
+each APK's `finbox.extension.lib` metadata, which the app checks on load.
+Set the property to a release tag or a finbox-android commit hash; JitPack
+resolves both.
+
+Iterating on the API itself? Publish it locally and the `mavenLocal()` entry in
+`settings.gradle.kts` will pick it up ahead of JitPack:
+
+```
+cd ../finbox-android && ./gradlew :extension-api:publishToMavenLocal
+```
+
+The Kotlin version pinned in the root `build.gradle.kts` must match the one
+finbox-android builds the API with, or its metadata is unreadable here.
 
 ## Publishing
 

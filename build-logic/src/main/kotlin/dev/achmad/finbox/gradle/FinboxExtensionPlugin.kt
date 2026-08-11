@@ -15,8 +15,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
  * - Android application module, no launcher activity
  * - Manifest declares the `dev.achmad.finbox.extension` feature plus
  *   `finbox.extension.lib` / `finbox.extension.class` metadata
- * - `compileOnly` against the shared parser API (`:core`) so the app
- *   provides the real classes at runtime
+ * - `compileOnly` against the published parser API so the app provides the
+ *   real classes at runtime (see the `finbox.apiVersion` gradle property)
  * - Copies the release APK to `repo/apk/finbox-<provider>-<version>.apk`
  */
 class FinboxExtensionPlugin : Plugin<Project> {
@@ -26,6 +26,8 @@ class FinboxExtensionPlugin : Plugin<Project> {
             pluginManager.apply("com.android.application")
 
             val finbox = extensions.create<FinboxExtension>("finbox")
+            val apiVersion = providers.gradleProperty("finbox.apiVersion").orNull
+                ?: throw GradleException("finbox.apiVersion must be set in gradle.properties")
 
             configure<ApplicationExtension> {
                 namespace = "dev.achmad.finbox.extension"
@@ -59,6 +61,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
             }
 
             val generateManifest = tasks.register("generateFinboxManifest") {
+                inputs.property("apiVersion", apiVersion)
                 val manifestFile = layout.buildDirectory.file("generated/manifest/AndroidManifest.xml")
                 inputs.property("provider", providers.provider { finbox.provider })
                 inputs.property("className", providers.provider { finbox.className })
@@ -67,7 +70,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 doLast {
                     val file = manifestFile.get().asFile
                     file.parentFile.mkdirs()
-                    file.writeText(manifest(finbox))
+                    file.writeText(manifest(finbox, apiVersion))
                 }
             }
             tasks.named("preBuild").configure { dependsOn(generateManifest) }
@@ -93,7 +96,11 @@ class FinboxExtensionPlugin : Plugin<Project> {
             }
 
             val deps = dependencies
-            deps.add("compileOnly", project(":core"))
+            deps.add("compileOnly", "com.github.achmadss.finbox-android:extension-api:$apiVersion")
+            // The API arrives as a published AAR now, so the stdlib no longer comes
+            // along transitively the way a project dependency did. Everything here is
+            // compileOnly: the app already ships these at runtime.
+            deps.add("compileOnly", "org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
             deps.add("compileOnly", "com.squareup.okhttp3:okhttp:5.1.0")
             deps.add("compileOnly", "org.jsoup:jsoup:1.18.3")
             deps.add("compileOnly", "org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
@@ -101,7 +108,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
         }
     }
 
-    private fun manifest(finbox: FinboxExtension): String = """
+    private fun manifest(finbox: FinboxExtension, apiVersion: String): String = """
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-feature
@@ -110,7 +117,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
             <application>
                 <meta-data
                     android:name="finbox.extension.lib"
-                    android:value="1.0" />
+                    android:value="$apiVersion" />
                 <meta-data
                     android:name="finbox.extension.class"
                     android:value="${finbox.className}" />
