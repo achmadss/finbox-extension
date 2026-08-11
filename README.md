@@ -81,6 +81,16 @@ cd ../finbox-android && ./gradlew :extension-api:publishToMavenLocal
 The Kotlin version pinned in the root `build.gradle.kts` must match the one
 finbox-android builds the API with, or its metadata is unreadable here.
 
+## Tests
+
+```
+./gradlew :extensions:<provider>:testDebugUnitTest
+```
+
+Plain JUnit on the JVM. Everything the plugin declares `compileOnly` is a real
+`testImplementation` dependency, since tests run without the app to supply it.
+KSP is disabled for test compilations — the `@Source` class lives in `main`.
+
 ## Versioning
 
 `finbox { versionCode }` becomes the APK's real `versionCode`, and its

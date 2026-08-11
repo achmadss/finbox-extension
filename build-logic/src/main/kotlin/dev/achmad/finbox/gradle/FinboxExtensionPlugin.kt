@@ -47,6 +47,9 @@ class FinboxExtensionPlugin : Plugin<Project> {
                     minSdk = 26
                     applicationId = "dev.achmad.finbox.extension.${project.name}"
                 }
+                testOptions {
+                    unitTests.isReturnDefaultValues = true
+                }
                 buildTypes {
                     release {
                         isMinifyEnabled = false
@@ -123,10 +126,22 @@ class FinboxExtensionPlugin : Plugin<Project> {
             // compileOnly: the app already ships these at runtime.
             deps.add("compileOnly", "org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
             deps.add("ksp", project(":compiler"))
+            // The processor describes the module's main sources. Unit tests hold no
+            // @Source class, so running it there would only fail the build.
+            tasks.matching { it.name.startsWith("ksp") && it.name.contains("UnitTest") }
+                .configureEach { enabled = false }
             deps.add("compileOnly", "com.squareup.okhttp3:okhttp:5.1.0")
             deps.add("compileOnly", "org.jsoup:jsoup:1.18.3")
             deps.add("compileOnly", "org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
             deps.add("compileOnly", "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+
+            // Unit tests run on the JVM without the app, so what is compileOnly above
+            // has to be a real dependency here.
+            deps.add("testImplementation", "com.github.achmadss.finbox-android:extension-api:$apiVersion")
+            deps.add("testImplementation", "org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+            deps.add("testImplementation", "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+            deps.add("testImplementation", "org.jsoup:jsoup:1.18.3")
+            deps.add("testImplementation", "junit:junit:4.13.2")
         }
     }
 
