@@ -68,12 +68,16 @@ each APK's `finbox.extension.lib` metadata, which the app checks on load.
 Set the property to a release tag or a finbox-android commit hash; JitPack
 resolves both.
 
-Iterating on the API itself? Publish it locally and the `mavenLocal()` entry in
-`settings.gradle.kts` will pick it up ahead of JitPack:
+Iterating on the API itself? `tools/update-api.sh` republishes it from a
+sibling finbox-android checkout into `~/.m2` and rebuilds here — the
+`mavenLocal()` entry in `settings.gradle.kts` picks it up ahead of JitPack:
 
 ```
-cd ../finbox-android && ./gradlew :extension-api:publishToMavenLocal
+./tools/update-api.sh            # or FINBOX_ANDROID=/path/to/finbox-android ./tools/update-api.sh
 ```
+
+The version stays `1.0` across API changes, so Gradle would otherwise keep
+serving the cached jar; the script passes `--refresh-dependencies` for you.
 
 The Kotlin version pinned in the root `build.gradle.kts` must match the one
 finbox-android builds the API with, or its metadata is unreadable here.
