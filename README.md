@@ -81,6 +81,18 @@ cd ../finbox-android && ./gradlew :extension-api:publishToMavenLocal
 The Kotlin version pinned in the root `build.gradle.kts` must match the one
 finbox-android builds the API with, or its metadata is unreadable here.
 
+## Versioning
+
+`finbox { versionCode }` becomes the APK's real `versionCode`, and its
+`versionName` is `<apiVersion>.<versionCode>` — 1.0.1, 1.0.2, ... The app reads
+both from the package itself rather than from custom metadata, and treats a
+missing `versionName` as a load error instead of substituting a default.
+
+`finbox.extension.lib` metadata states the API version explicitly; if it is ever
+absent the app falls back to everything before the last dot of the versionName,
+which is the same value by construction. `tools/update-repo.py` derives
+`lib_version` in `index.json` the same way.
+
 ## Publishing
 
 ```bash

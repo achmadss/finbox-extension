@@ -49,7 +49,7 @@ def main() -> int:
             "pkg": f"dev.achmad.finbox.extension.{provider}",
             "version_code": version_code,
             "version_name": version_name,
-            "lib_version": "1.0",
+            "lib_version": version_name.rsplit(".", 1)[0],
             "apk": f"{BASE_URL}/apk/{apk.name}",
             "sha256": sha256(apk),
         })

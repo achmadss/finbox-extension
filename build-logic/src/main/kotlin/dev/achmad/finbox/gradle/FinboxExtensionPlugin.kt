@@ -1,6 +1,7 @@
 package dev.achmad.finbox.gradle
 
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.google.devtools.ksp.gradle.KspExtension
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
@@ -44,12 +45,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 compileSdk = 36
                 defaultConfig {
                     minSdk = 26
-                    // project.name is available at plugin-apply time; the finbox {} DSL
-                    // runs after AGP eagerly reads defaultConfig, so version data lives
-                    // in manifest metadata (finbox.extension.version_code) instead.
                     applicationId = "dev.achmad.finbox.extension.${project.name}"
-                    versionCode = 1
-                    versionName = "1.0.1"
                 }
                 buildTypes {
                     release {
@@ -63,6 +59,18 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_11
                     targetCompatibility = JavaVersion.VERSION_11
+                }
+            }
+
+            // defaultConfig is read eagerly, before the finbox {} block is evaluated;
+            // the variant API is lazy, so the APK carries the real version rather
+            // than a placeholder duplicated into manifest metadata.
+            configure<ApplicationAndroidComponentsExtension> {
+                onVariants { variant ->
+                    variant.outputs.forEach { output ->
+                        output.versionCode.set(providers.provider { finbox.versionCode })
+                        output.versionName.set(providers.provider { finbox.versionName(apiVersion) })
+                    }
                 }
             }
 
@@ -88,7 +96,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 val apkFile = layout.buildDirectory.file("outputs/apk/release/${project.name}-release.apk")
                 val outFile = rootProject.layout.projectDirectory
                     .dir("repo/apk")
-                    .file(providers.provider { "finbox-${finbox.provider}-${finbox.versionName()}.apk" })
+                    .file(providers.provider { "finbox-${finbox.provider}-${finbox.versionName(apiVersion)}.apk" })
                 inputs.file(apkFile)
                 outputs.file(outFile)
                 doLast {
@@ -141,12 +149,6 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 <meta-data
                     android:name="finbox.extension.name"
                     android:value="${finbox.name}" />
-                <meta-data
-                    android:name="finbox.extension.version_code"
-                    android:value="${finbox.versionCode}" />
-                <meta-data
-                    android:name="finbox.extension.version_name"
-                    android:value="${finbox.versionName()}" />
             </application>
         </manifest>
     """.trimIndent()
