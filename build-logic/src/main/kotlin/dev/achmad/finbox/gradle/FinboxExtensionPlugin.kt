@@ -1,6 +1,7 @@
 package dev.achmad.finbox.gradle
 
 import com.android.build.api.dsl.ApplicationExtension
+import com.google.devtools.ksp.gradle.KspExtension
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
@@ -99,6 +100,11 @@ class FinboxExtensionPlugin : Plugin<Project> {
                 if (finbox.name.isBlank()) throw GradleException("finbox { name } must be set")
                 if (finbox.provider.isBlank()) throw GradleException("finbox { provider } must be set")
                 if (finbox.versionCode < 1) throw GradleException("finbox { versionCode } must be >= 1")
+                // The processor derives the generated source's identity from these.
+                configure<KspExtension> {
+                    arg("finbox.name", finbox.name)
+                    arg("finbox.versionCode", finbox.versionCode.toString())
+                }
                 tasks.named("assembleRelease").configure { finalizedBy(copyApk) }
             }
 

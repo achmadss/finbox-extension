@@ -14,6 +14,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 
 private const val SOURCE_ANNOTATION = "dev.achmad.finbox.extension.Source"
+private const val TRANSACTION_PARSER = "dev.achmad.finbox.extension.TransactionParser"
 private const val TRANSACTION_SOURCE = "dev.achmad.finbox.extension.TransactionSource"
 private const val SOURCE_FACTORY = "dev.achmad.finbox.extension.SourceFactory"
 
@@ -32,6 +33,7 @@ private const val GENERATED_CLASS = "GeneratedSourceFactory"
  */
 class SourceProcessor(
     private val codeGenerator: CodeGenerator,
+    private val options: Map<String, String>,
     private val logger: KSPLogger,
 ) : SymbolProcessor {
 
@@ -65,14 +67,17 @@ class SourceProcessor(
             else -> annotated.single()
         }
 
+        var identity: Identity? = null
+
         val superTypes = source.getAllSuperTypes()
             .mapNotNull { it.declaration.qualifiedName?.asString() }
             .toSet()
         val isFactory = SOURCE_FACTORY in superTypes
         val isSource = TRANSACTION_SOURCE in superTypes
+        val isParser = TRANSACTION_PARSER in superTypes
 
-        if (!isFactory && !isSource) {
-            logger.error("@Source class must implement TransactionSource or SourceFactory.", source)
+        if (!isFactory && !isParser) {
+            logger.error("@Source class must implement TransactionParser or SourceFactory.", source)
             return emptyList()
         }
         if (source.classKind != ClassKind.CLASS && source.classKind != ClassKind.OBJECT) {
@@ -95,7 +100,27 @@ class SourceProcessor(
 
         // An object is referenced directly; a class is constructed.
         val instance = if (source.classKind == ClassKind.OBJECT) fqn else "$fqn()"
-        val sources = if (isFactory) "$instance.createSources()" else "listOf($instance)"
+
+        // A SourceFactory or a hand-written TransactionSource carries its own
+        // identity. A plain TransactionParser gets one from the finbox {} block.
+        val sources = when {
+            isFactory -> "$instance.createSources()"
+            isSource -> "listOf($instance)"
+            else -> {
+                val name = options["finbox.name"]
+                val versionId = options["finbox.versionCode"]?.toIntOrNull()
+                if (name.isNullOrBlank() || versionId == null) {
+                    logger.error(
+                        "finbox { name } and finbox { versionCode } must be set; the generated " +
+                            "source identity is derived from them.",
+                        source,
+                    )
+                    return emptyList()
+                }
+                identity = Identity(name, versionId)
+                "listOf(Bound($instance))"
+            }
+        }
 
         codeGenerator.createNewFile(
             dependencies = Dependencies(aggregating = false, source.containingFile!!),
@@ -108,9 +133,12 @@ class SourceProcessor(
                 |package $GENERATED_PACKAGE
                 |
                 |import dev.achmad.finbox.extension.SourceFactory
+                |import dev.achmad.finbox.extension.TransactionParser
                 |import dev.achmad.finbox.extension.TransactionSource
+                |import dev.achmad.finbox.extension.sourceIdOf
                 |
                 |class $GENERATED_CLASS : SourceFactory {
+                |${identity?.render().orEmpty()}
                 |    override fun createSources(): List<TransactionSource> = $sources
                 |}
                 |
@@ -122,7 +150,21 @@ class SourceProcessor(
     }
 }
 
+/** Identity supplied by Gradle, wrapped around a plain [TRANSACTION_PARSER]. */
+private data class Identity(val name: String, val versionId: Int) {
+    fun render(): String = """
+        |    private class Bound(
+        |        parser: TransactionParser,
+        |    ) : TransactionSource, TransactionParser by parser {
+        |        override val name: String = "${name.replace("\\", "\\\\").replace("\"", "\\\"")}"
+        |        override val versionId: Int = $versionId
+        |        override val id: Long = sourceIdOf(name, versionId)
+        |    }
+        |
+    """.trimMargin()
+}
+
 class SourceProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
-        SourceProcessor(environment.codeGenerator, environment.logger)
+        SourceProcessor(environment.codeGenerator, environment.options, environment.logger)
 }

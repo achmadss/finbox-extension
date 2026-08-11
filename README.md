@@ -30,22 +30,29 @@ app via a child-first classloader.
    }
    ```
 
-2. Implement `dev.achmad.finbox.extension.TransactionSource` in package
-   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Source`.
-   `id` must be deterministic (`MD5("name.lowercase()/versionId")`, see
-   `BriParser.sourceId`).
+2. Implement `dev.achmad.finbox.extension.TransactionParser` in package
+   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Source`:
 
    ```kotlin
    @Source
-   class BriParser : TransactionSource { /* ... */ }
+   class BriParser : TransactionParser {
+       override fun isEmailForProvider(email: EmailMessage): Boolean { /* ... */ }
+       override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> { /* ... */ }
+   }
    ```
 
-   Exactly one `@Source` class per module; the `:compiler` KSP processor
-   generates `GeneratedSourceFactory` from it, and that fixed name is what the
-   manifest's `finbox.extension.class` points at. To ship several parsers in one
-   APK, put `@Source` on a `SourceFactory` instead. Getting any of this wrong
-   (missing annotation, two of them, abstract class, constructor arguments) is a
-   build error rather than a load failure on someone's phone.
+   Behaviour only — `name`, `versionId` and `id` are not written in the parser.
+   The `:compiler` KSP processor generates `GeneratedSourceFactory`, taking
+   `name` and `versionId` from the `finbox { }` block and deriving `id` via
+   `sourceIdOf(name, versionId)` (`MD5("name.lowercase()/versionId")`, stable
+   across releases so stored transactions keep matching). That fixed generated
+   name is what the manifest's `finbox.extension.class` points at.
+
+   Exactly one `@Source` class per module. To ship several parsers in one APK,
+   annotate a `SourceFactory` instead and give each `TransactionSource` its own
+   identity — Gradle only describes one. Getting any of this wrong (missing
+   annotation, two of them, abstract class, constructor arguments) is a build
+   error rather than a load failure on someone's phone.
 3. Register the module in `settings.gradle.kts`.
 
 ## The parser API

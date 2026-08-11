@@ -3,7 +3,7 @@ package dev.achmad.finbox.extension.bri
 import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
-import dev.achmad.finbox.extension.TransactionSource
+import dev.achmad.finbox.extension.TransactionParser
 import dev.achmad.finbox.extension.TransactionType
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -25,11 +25,7 @@ import java.time.ZoneId
  * to the unrecognized queue) whenever amount or date cannot be extracted.
  */
 @Source
-class BriParser : TransactionSource {
-
-    override val name: String = "Bank BRI"
-    override val versionId: Int = 1
-    override val id: Long = sourceId(name, versionId)
+class BriParser : TransactionParser {
 
     override fun isEmailForProvider(email: EmailMessage): Boolean {
         val from = email.from.lowercase()
@@ -139,19 +135,6 @@ class BriParser : TransactionSource {
                 .toEpochMilli()
         } catch (e: Exception) {
             null
-        }
-    }
-
-    companion object {
-        /** Deterministic id convention: MD5("name.lowercase()/versionId"), first 8 bytes as positive Long. */
-        fun sourceId(name: String, versionId: Int): Long {
-            val digest = java.security.MessageDigest.getInstance("MD5")
-                .digest("${name.lowercase()}/$versionId".toByteArray())
-            var value = 0L
-            for (i in 0 until 8) {
-                value = (value shl 8) or (digest[i].toLong() and 0xff)
-            }
-            return value and Long.MAX_VALUE
         }
     }
 }
