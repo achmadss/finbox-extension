@@ -11,7 +11,7 @@ app via a child-first classloader.
 | Path | Purpose |
 |---|---|
 | `build-logic/` | `finbox.plugins.extension` Gradle plugin (manifest generation, versioning, APK copy) |
-| `compiler/` | KSP processor turning the module's `@Source` class into the generated entry point |
+| `compiler/` | KSP processor turning the module's `@Parser` class into the generated entry point |
 | `extensions/<provider>/` | One module per provider (bri, jago, bca, gopay, ...) |
 | `repo/` | Published artifacts: APKs + `index.json` served to the app |
 | `tools/` | `update-repo.py` (index generation), `publish.sh` (build + index) |
@@ -31,34 +31,31 @@ app via a child-first classloader.
    ```
 
 2. Implement `dev.achmad.finbox.extension.TransactionParser` in package
-   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Source`:
+   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Parser`:
 
    ```kotlin
-   @Source
+   @Parser
    class BriParser : TransactionParser {
        override fun isEmailForProvider(email: EmailMessage): Boolean { /* ... */ }
        override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> { /* ... */ }
    }
    ```
 
-   Behaviour only — `name`, `versionId` and `id` are not written in the parser.
-   The `:compiler` KSP processor generates `GeneratedSourceFactory`, taking
-   `name` and `versionId` from the `finbox { }` block and deriving `id` via
-   `sourceIdOf(name, versionId)` (`MD5("name.lowercase()/versionId")`, stable
-   across releases so stored transactions keep matching). That fixed generated
-   name is what the manifest's `finbox.extension.class` points at.
+   Behaviour only — the parser carries no name, version or id. The `:compiler`
+   KSP processor generates `GeneratedParser`, a delegate with a fixed name that
+   the manifest's `finbox.extension.class` points at; the app takes the identity
+   from the manifest instead (id is `MD5("name.lowercase()/versionCode")`,
+   stable across releases so stored transactions keep matching).
 
-   Exactly one `@Source` class per module. To ship several parsers in one APK,
-   annotate a `SourceFactory` instead and give each `TransactionSource` its own
-   identity — Gradle only describes one. Getting any of this wrong (missing
-   annotation, two of them, abstract class, constructor arguments) is a build
-   error rather than a load failure on someone's phone.
+   Exactly one `@Parser` class per module — one provider per APK. Getting this
+   wrong (missing annotation, two of them, abstract class, constructor
+   arguments) is a build error rather than a load failure on someone's phone.
 3. Register the module in `settings.gradle.kts`.
 
 ## The parser API
 
-`TransactionSource`, `SourceFactory`, `EmailMessage` and `ParsedTransaction`
-come from finbox-android's `:extension-api`, published via JitPack and pinned in
+`TransactionParser`, `EmailMessage` and `ParsedTransaction` come from
+finbox-android's `:extension-api`, published via JitPack and pinned in
 `gradle.properties`:
 
 ```properties
@@ -89,7 +86,7 @@ finbox-android builds the API with, or its metadata is unreadable here.
 
 Plain JUnit on the JVM. Everything the plugin declares `compileOnly` is a real
 `testImplementation` dependency, since tests run without the app to supply it.
-KSP is disabled for test compilations — the `@Source` class lives in `main`.
+KSP is disabled for test compilations — the `@Parser` class lives in `main`.
 
 ## Versioning
 

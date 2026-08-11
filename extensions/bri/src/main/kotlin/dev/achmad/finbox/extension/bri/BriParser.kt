@@ -2,7 +2,7 @@ package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.ParsedTransaction
-import dev.achmad.finbox.extension.Source
+import dev.achmad.finbox.extension.Parser
 import dev.achmad.finbox.extension.TransactionParser
 import dev.achmad.finbox.extension.TransactionType
 import java.time.LocalDateTime
@@ -24,7 +24,7 @@ import java.time.ZoneId
  * The parser is deliberately tolerant: it returns an empty list (email goes
  * to the unrecognized queue) whenever amount or date cannot be extracted.
  */
-@Source
+@Parser
 class BriParser : TransactionParser {
 
     override fun isEmailForProvider(email: EmailMessage): Boolean {
