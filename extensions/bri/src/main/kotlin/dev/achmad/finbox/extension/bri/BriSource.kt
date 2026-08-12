@@ -1,7 +1,6 @@
 package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
 import dev.achmad.finbox.extension.TransactionSource
@@ -27,13 +26,6 @@ import java.time.ZoneId
  */
 @Source
 class BriSource : TransactionSource {
-
-    // Everything BRI sends, narrowed to the sending domain. The app adds the
-    // import window; isEmailForProvider throws away the statements, OTPs and
-    // promos that come back with the notifications.
-    override val emailQuery = EmailQuery(
-        from = listOf("bri.co.id"),
-    )
 
     override fun isEmailForProvider(email: EmailMessage): Boolean {
         val from = email.from.lowercase()

@@ -44,17 +44,9 @@ class BriSourceTest {
     private fun parse(body: String) = runBlocking { source.parseEmail(email(body = body)) }
 
     @Test
-    fun `asks gmail for bri mail only`() {
-        val query = source.emailQuery
-
-        assertFalse(query.isEmpty)
-        assertEquals(listOf("bri.co.id"), query.from)
-    }
-
-    @Test
     fun `confirms only transaction mail from the bri domain`() {
-        // The query already restricts the sender; this rejects what BRI sends
-        // from the same address that isn't a transaction.
+        // The app offers every synced email to every source, so this has to
+        // reject both other senders and BRI's own non-transaction mail.
         assertTrue(source.isEmailForProvider(email(from = "noreply@bri.co.id", body = notification)))
         assertFalse(
             source.isEmailForProvider(

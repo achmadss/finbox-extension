@@ -5,10 +5,10 @@
       "provider": "bri",
       "pkg": "dev.achmad.finbox.extension.bri",
       "version_code": 1,
-      "version_name": "1.1.1",
-      "lib_version": "1.1",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.1.1.apk",
-      "sha256": "ef7bd4874596a8dc3f6be7dbbe9d303051c1143c707aff6db453c1c69eedaab7"
+      "version_name": "1.2.1",
+      "lib_version": "1.2",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.2.1.apk",
+      "sha256": "e13548149f1f273d9e43dca95b9b8871aee40a1d7de0471c5086c52b384321b7"
     }
   ]
 }
