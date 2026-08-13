@@ -7,10 +7,14 @@ gradle plugin's copyReleaseApk task).
 Icons are published alongside: the app reads an installed extension's icon out
 of its APK, but the "available" list has no APK yet, so the largest mipmap of
 each module is copied to repo/icon/<provider>.png and linked from the index.
+
+`--targets` prints the assembleRelease tasks worth running, which is how
+publish.sh avoids rebuilding an extension that was not changed.
 """
 import hashlib
 import json
 import pathlib
+import re
 import shutil
 import sys
 
@@ -45,6 +49,38 @@ def publish_icon(provider: str) -> str | None:
     ICON_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, ICON_DIR / f"{provider}.png")
     return f"{BASE_URL}/icon/{provider}.png"
+
+
+def targets() -> int:
+    """Print the assembleRelease task of every extension whose APK is missing.
+
+    A published version is final: the APK is named after `finbox.apiVersion` and
+    the module's versionCode, and the index carries its sha256. Rebuilding one
+    that is already in repo/apk would publish a hash the app has not seen for a
+    version it has, since two builds of the same source are not byte-identical.
+    So the presence of the file is the whole check — bump versionCode to
+    republish, exactly as CONTRIBUTING says.
+    """
+    properties = (ROOT / "gradle.properties").read_text()
+    api_version = re.search(r"^finbox\.apiVersion=(.+)$", properties, re.M)
+    if not api_version:
+        print("finbox.apiVersion is not set in gradle.properties", file=sys.stderr)
+        return 1
+
+    for module in sorted((ROOT / "extensions").iterdir()):
+        build_file = module / "build.gradle.kts"
+        if not build_file.exists():
+            continue
+        build = build_file.read_text()
+        provider = re.search(r'provider\s*=\s*"([^"]+)"', build)
+        version_code = re.search(r"versionCode\s*=\s*(\d+)", build)
+        if not provider or not version_code:
+            print(f"warning: {module.name} declares no provider/versionCode", file=sys.stderr)
+            continue
+        apk = f"finbox-{provider[1]}-{api_version[1].strip()}.{version_code[1]}.apk"
+        if not (APK_DIR / apk).exists():
+            print(f":extensions:{module.name}:assembleRelease")
+    return 0
 
 
 def main() -> int:
@@ -91,4 +127,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(targets() if "--targets" in sys.argv else main())

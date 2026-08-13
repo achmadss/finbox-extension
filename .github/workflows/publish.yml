@@ -1,0 +1,63 @@
+name: Publish
+
+# Only paths that end up inside an APK. A rebuilt APK is not byte-identical, so
+# a README push would otherwise republish every extension under a new hash and
+# make the app re-download both.
+on:
+  push:
+    branches: [main]
+    paths:
+      - extensions/**
+      - lib/**
+      - compiler/**
+      - build-logic/**
+      - tools/**
+      - gradle.properties
+      - build.gradle.kts
+      - .github/workflows/publish.yml
+  workflow_dispatch:
+
+# Two publishes at once would race on repo/index.json.
+concurrency:
+  group: publish
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - run: sdkmanager "platforms;android-36"
+
+      # Release APKs are signed with the debug config, and a runner makes itself
+      # a fresh debug key on first use. Android refuses an update signed by a
+      # different key than the installed APK, so the real one has to be restored
+      # or every published extension becomes uninstallable over the old one.
+      - name: Restore the signing key
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+        run: |
+          test -n "$DEBUG_KEYSTORE" || { echo "DEBUG_KEYSTORE secret is not set"; exit 1; }
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
+
+      # Runs the tests, builds only the extensions whose versionCode has no APK
+      # in repo/apk yet, and regenerates the index.
+      - run: ./tools/publish.sh
+
+      - name: Commit the repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add repo
+          # Nothing to say when the APKs and the index came out unchanged.
+          git diff --cached --quiet || { git commit -m "Publish extensions"; git push; }

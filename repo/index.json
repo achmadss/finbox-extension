@@ -15,11 +15,11 @@
       "name": "Bank Jago",
       "provider": "jago",
       "pkg": "dev.achmad.finbox.extension.jago",
-      "version_code": 3,
-      "version_name": "1.4.3",
+      "version_code": 4,
+      "version_name": "1.4.4",
       "lib_version": "1.4",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-jago-1.4.3.apk",
-      "sha256": "f443a157cbfad5698f547cf088d8dc66348665993e1ee2e697d661cd369a51ba",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-jago-1.4.4.apk",
+      "sha256": "386a26eba3596d3f2422d86267af5101fd29b9e7b6b0209003e2017dc8051524",
       "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/jago.png"
     }
   ]

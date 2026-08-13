@@ -134,13 +134,23 @@ supply it.
 git add repo && git commit -m "Publish extensions" && git push
 ```
 
-That builds every release APK, copies them to `repo/apk/` and regenerates
-`repo/index.json`, which carries each APK's sha256. Always publish through the
-script: a rebuilt APK is not byte-identical, so a hand-edited index publishes a
-hash the app will reject on install.
+That runs the tests, builds the release APK of every extension whose
+`versionCode` has no APK in `repo/apk/` yet, and regenerates `repo/index.json`,
+which carries each APK's sha256. Always publish through the script: a rebuilt
+APK is not byte-identical, so a hand-edited index publishes a hash the app will
+reject on install.
 
 Bump `versionCode` in `finbox {}` for every published change — including one
-that only touches `lib/receipt`, since that is compiled into your APK.
+that only touches `lib/receipt`, since that is compiled into your APK. Without a
+bump the script finds the APK already there and builds nothing, which is the
+point: an unchanged version keeps the sha256 the app already knows.
+
+Pushing to `main` does all of the above in `.github/workflows/publish.yml` and
+commits the result, so publishing by hand is only for trying it locally. The
+workflow restores the debug keystore from the `DEBUG_KEYSTORE` secret — release
+APKs are signed with the debug config, and Android refuses an update signed by a
+different key than the installed APK, so a runner's own generated key would make
+every published extension uninstallable over the old one.
 
 ## Versions
 
