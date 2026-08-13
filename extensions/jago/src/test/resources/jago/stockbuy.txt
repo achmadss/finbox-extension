@@ -1,0 +1,14 @@
+Hello NAMA NASABAH,
+Your fund for stock purchase has been automatically withdrawn by PT. Stockbit Sekuritas Digital from your Investment Pocket with the details as follows:
+Transaction Summary
+From:
+1121 **** 9669
+To:
+PT. Stockbit Sekuritas Digital
+Amount:
+Rp33.650
+Transaction Date:
+18 May 2026 02:08 WIB
+You can view the transaction history in your Investment Pocket Detail inside the Jago app.
+From saving, transacting, to investing, do it all your way.
+You can contact Tanya Jago at 1500 746 or tanya@jago.com.

@@ -1,0 +1,17 @@
+Halo,NAMA NASABAH
+Berikut ini adalah informasi transaksi yang telah Anda lakukan di Aplikasi BRImo.
+Transaksi Berhasil
+Tanggal 21 Juli 2026 , 16:40:32 WIB
+Nomor Referensi 180715421169
+Sumber Dana NAMA NASABAH
+2171 **** **** 508
+Jenis Transaksi Transfer BI-FAST
+Bank Tujuan BANK JAGO
+Nomor Tujuan 1061 **** 9716
+Nama Tujuan NAMA PENERIMA
+Alias Penerima -
+Catatan jago
+Nominal Rp1.000.000
+Biaya Admin Rp2.500
+Total Rp1.002.500
+Semoga informasi ini dapat bermanfaat bagi Anda. Call Center di nomor 1500017

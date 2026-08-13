@@ -114,6 +114,16 @@ class JagoSourceTest {
     }
 
     @Test
+    fun `investment pocket movements are not spending, so they are dropped`() {
+        // The buy has a full summary and would otherwise parse as a payment.
+        assertTrue(runBlocking { source.parseEmail(email(fixture("stockbuy"))) }.isEmpty())
+        assertTrue(runBlocking { source.parseEmail(email(fixture("stocksell"))) }.isEmpty())
+
+        assertFalse(source.isEmailForProvider(email(fixture("stockbuy"))))
+        assertFalse(source.isEmailForProvider(email(fixture("stocksell"))))
+    }
+
+    @Test
     fun `every notification is claimed, and nothing else from the same sender is`() {
         assertTrue(source.isEmailForProvider(email(fixture("payment"))))
         assertTrue(source.isEmailForProvider(email(fixture("transfer"))))

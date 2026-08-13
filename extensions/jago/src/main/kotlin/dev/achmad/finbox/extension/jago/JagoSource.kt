@@ -29,6 +29,9 @@ import dev.achmad.finbox.lib.receipt.detectType
  * stating the amount. It carries no date and no merchant either, so it is read
  * against the mail's own arrival time.
  *
+ * Investment Pocket mails are ignored: a stock buy or sale moves money between
+ * the user's own pockets, not out of them.
+ *
  * Nothing here carries a reference number — Jago simply does not send one — so
  * transactions are identified by their email alone.
  */
@@ -72,6 +75,10 @@ class JagoSource : TransactionSource {
      * figure is only trusted in the one sentence that is known to be a receipt.
      */
     private fun Receipt.transactionAmount(): Long? = when {
+        // Money moving between the account and the Investment Pocket is not
+        // spending — the stock broker's withdrawal is a buy, the credit back a
+        // sale — so both are dropped rather than booked twice.
+        lines.any { INVESTMENT.containsMatchIn(it) } -> null
         hasSummary() -> amount(*AMOUNT)
         lines.any { DEBIT_CARD in it.lowercase() } -> statedAmount()
         else -> null
@@ -83,6 +90,10 @@ class JagoSource : TransactionSource {
     private companion object {
         const val SUMMARY = "Transaction Summary"
         const val DEBIT_CARD = "debit card"
+
+        // Not "invest": every Jago footer says "from saving, transacting, to
+        // investing", which would drop the lot.
+        val INVESTMENT = Regex("investment pocket|stock", RegexOption.IGNORE_CASE)
 
         val AMOUNT = arrayOf("Amount")
         val DATE = arrayOf("Transaction Date")

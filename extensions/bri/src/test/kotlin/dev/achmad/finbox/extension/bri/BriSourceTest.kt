@@ -82,6 +82,22 @@ class BriSourceTest {
     }
 
     @Test
+    fun `an out-of-bank transfer is charged with its fee`() {
+        val parsed = runBlocking {
+            source.parseEmail(
+                email(fixture("bifast"), subject = "Pemindahan Dana Bank Lain Dalam Negeri"),
+            )
+        }.single()
+
+        // Nominal Rp1.000.000 plus Biaya Admin Rp2.500, which is the stated Total.
+        assertEquals(1_002_500L, parsed.amount)
+        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("NAMA PENERIMA", parsed.merchant)
+        assertEquals("180715421169", parsed.reference)
+        assertEquals(millis(2026, 7, 21, 16, 40, 32), parsed.date)
+    }
+
+    @Test
     fun `a BRIZZI top up has no date row, so the header date is used`() {
         val parsed = runBlocking {
             source.parseEmail(email(fixture("brizzi"), subject = "Top Up BRIZZI Berhasil"))
@@ -118,6 +134,7 @@ class BriSourceTest {
         assertTrue(source.isEmailForProvider(email(fixture("qris"))))
         assertTrue(source.isEmailForProvider(email(fixture("transfer"))))
         assertTrue(source.isEmailForProvider(email(fixture("brizzi"))))
+        assertTrue(source.isEmailForProvider(email(fixture("bifast"))))
 
         // A bank sends OTPs and promotions from the address the query matches.
         assertFalse(
