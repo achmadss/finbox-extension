@@ -34,8 +34,10 @@ dependencies {
     // Same deal as an extension module: the app provides these at runtime.
     compileOnly("com.github.achmadss.finbox-android:extension-api:$apiVersion")
     compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+    compileOnly("org.jsoup:jsoup:1.18.3")
 
     testImplementation("com.github.achmadss.finbox-android:extension-api:$apiVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+    testImplementation("org.jsoup:jsoup:1.18.3")
     testImplementation("junit:junit:4.13.2")
 }

@@ -5,9 +5,10 @@ import dev.achmad.finbox.extension.TransactionType
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import org.jsoup.Jsoup
 
 /**
- * A bank receipt as the app hands it over: html flattened to one line per row.
+ * A bank receipt, flattened to one line per row.
  *
  * Every bank lays its receipt out differently, but they all state fields as a
  * label and a value — either on one line ("Nominal Rp13.000", BRI) or on two
@@ -52,17 +53,38 @@ class Receipt(val lines: List<String>) {
     fun statedAmount(): Long? = lines.firstNotNullOfOrNull(::findAmount)
 
     companion object {
-        private val TAGS = Regex("<[^>]+>")
+        /**
+         * The body, flattened here rather than taken as the app flattened it.
+         *
+         * html wins when there is any, because the layout is what pairs a label
+         * with its value and this is where that decision belongs: a bank whose
+         * markup flattens badly is then a fix in this repo, not a release of
+         * the app.
+         */
+        fun of(email: EmailMessage): Receipt =
+            if (email.bodyHtml.isNotBlank()) ofHtml(email.bodyHtml) else Receipt(email.bodyText.toLines())
 
-        /** The body, preferring text; html is stripped only as a fallback. */
-        fun of(email: EmailMessage): Receipt = Receipt(
-            email.bodyText
-                .ifBlank { email.bodyHtml.replace(TAGS, "\n") }
-                .lineSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .toList(),
-        )
+        /**
+         * Flattens html to one line per row.
+         *
+         * `Jsoup.text()` alone returns a single line, which loses what pairs a
+         * label with its value — these mails put both in one table row and
+         * nothing else marks where a field ends.
+         */
+        fun ofHtml(html: String): Receipt {
+            val document = Jsoup.parse(html)
+            document.outputSettings().prettyPrint(false)
+            document.select("style, script, head").remove()
+            // A literal marker, not a newline: text() collapses real whitespace,
+            // so the break has to survive as characters and be put back after.
+            document.select("br, tr, p, div, li, h1, h2, h3, h4, table").before(MARKER)
+            return Receipt(document.text().replace(MARKER, "\n").toLines())
+        }
+
+        private const val MARKER = "\\n"
+
+        private fun String.toLines(): List<String> =
+            lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     }
 }
 

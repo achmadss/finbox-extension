@@ -1,5 +1,6 @@
 package dev.achmad.finbox.lib.receipt
 
+import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -119,6 +120,70 @@ class ReceiptTest {
             ).statedAmount(),
         )
         assertNull(Receipt(listOf("Terminal ID A01", "Customer PAN 9360054216156509719")).statedAmount())
+    }
+
+    @Test
+    fun `html is flattened here, one line per row, so a label keeps its value`() {
+        val receipt = Receipt.ofHtml(
+            """
+            <html><head><style>.total{font-weight:700}</style></head><body>
+            <table>
+              <tr><th>Nomor Referensi</th><td>192779074268</td></tr>
+              <tr><th>Tanggal Transaksi</th><td>11 Aug 2026&#44; 10:30:27 WIB</td></tr>
+            </table>
+            <p>Amount<br>Rp 2.000</p>
+            </body></html>
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(
+                "Nomor Referensi 192779074268",
+                "Tanggal Transaksi 11 Aug 2026, 10:30:27 WIB",
+                "Amount",
+                "Rp 2.000",
+            ),
+            receipt.lines,
+        )
+        // Both layouts, out of the same markup.
+        assertEquals("192779074268", receipt.field("Nomor Referensi"))
+        assertEquals(2_000L, receipt.amount("Amount"))
+    }
+
+    @Test
+    fun `html wins over the text the app derived from it`() {
+        val email = EmailMessage(
+            id = 1L,
+            messageId = "<test@example.com>",
+            threadId = "t1",
+            subject = "",
+            from = "bank@example.com",
+            to = "me@example.com",
+            date = 0L,
+            // What a naive flattener upstream would have produced: the label and
+            // its value welded into one line.
+            bodyText = "Amount Rp 2.000 Tip Amount Rp 0",
+            bodyHtml = "<table><tr><td>Amount</td><td>Rp 2.000</td></tr></table>",
+        )
+
+        assertEquals(2_000L, Receipt.of(email).amount("Amount"))
+    }
+
+    @Test
+    fun `a plain text email is still read as it arrived`() {
+        val email = EmailMessage(
+            id = 1L,
+            messageId = "<test@example.com>",
+            threadId = "t1",
+            subject = "",
+            from = "bank@example.com",
+            to = "me@example.com",
+            date = 0L,
+            bodyText = "Nominal Rp13.000",
+            bodyHtml = "",
+        )
+
+        assertEquals(13_000L, Receipt.of(email).amount("Nominal"))
     }
 
     @Test
