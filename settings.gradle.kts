@@ -29,4 +29,6 @@ rootProject.name = "finbox-extension"
 includeBuild("build-logic")
 
 include(":compiler")
+include(":lib:receipt")
 include(":extensions:bri")
+include(":extensions:jago")

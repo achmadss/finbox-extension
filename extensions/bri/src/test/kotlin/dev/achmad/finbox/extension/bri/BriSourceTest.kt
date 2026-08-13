@@ -2,24 +2,32 @@ package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.TransactionType
-import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * The fixtures are real BRImo receipts, flattened by the app's html-to-text
+ * (one line per table row) and with names and account numbers redacted.
+ */
 class BriSourceTest {
 
     private val source = BriSource()
 
+    private fun fixture(name: String): String =
+        checkNotNull(javaClass.getResourceAsStream("/bri/$name.txt")) { "missing fixture $name" }
+            .bufferedReader()
+            .readText()
+
     private fun email(
-        body: String = "",
-        html: String = "",
+        body: String,
         subject: String = "Notifikasi Transaksi BRI",
-        from: String = "noreply@bri.co.id",
+        from: String = "Bank BRI <BankBRI@bri.co.id>",
+        date: Long = 0L,
     ) = EmailMessage(
         id = 1L,
         messageId = "<test@bri.co.id>",
@@ -27,122 +35,110 @@ class BriSourceTest {
         subject = subject,
         from = from,
         to = "me@example.com",
-        date = 0L,
+        date = date,
         bodyText = body,
-        bodyHtml = html,
+        bodyHtml = "",
     )
 
-    private val notification = """
-        PEMBERITAHUAN TRANSAKSI
-        KARTU : 5241 08** **** 1234
-        TANGGAL : 26/01/2026 10:30:12
-        TRANSAKSI : PEMBAYARAN TOKOPEDIA
-        JUMLAH : Rp1.000.000,00
-        SALDO : Rp5.000.000,00
-    """.trimIndent()
-
-    private fun parse(body: String) = runBlocking { source.parseEmail(email(body = body)) }
+    // The receipts state WIB, so the instant is fixed wherever the test runs.
+    private fun millis(
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+        minute: Int,
+        second: Int,
+    ): Long = ZonedDateTime.of(year, month, day, hour, minute, second, 0, ZoneOffset.ofHours(7))
+        .toInstant()
+        .toEpochMilli()
 
     @Test
-    fun `confirms only transaction mail from the bri domain`() {
-        // The app offers every synced email to every source, so this has to
-        // reject both other senders and BRI's own non-transaction mail.
-        assertTrue(source.isEmailForProvider(email(from = "noreply@bri.co.id", body = notification)))
+    fun `a QRIS payment is an expense, with its merchant`() {
+        val parsed = runBlocking {
+            source.parseEmail(email(fixture("qris"), subject = "Pembelian QRIS Berhasil"))
+        }.single()
+
+        assertEquals(13_000L, parsed.amount)
+        assertEquals("IDR", parsed.currency)
+        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("Warkop Maharani", parsed.merchant)
+        assertEquals("192779074268", parsed.reference)
+        assertEquals(millis(2026, 8, 11, 10, 30, 27), parsed.date)
+    }
+
+    @Test
+    fun `a transfer names the recipient and reads the Indonesian month`() {
+        val parsed = runBlocking {
+            source.parseEmail(
+                email(fixture("transfer"), subject = "Pemindahan Dana Sesama Rekening BRI"),
+            )
+        }.single()
+
+        assertEquals(30_000L, parsed.amount)
+        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("NAMA PENERIMA", parsed.merchant)
+        assertEquals("193865864645", parsed.reference)
+        assertEquals(millis(2026, 8, 13, 9, 16, 10), parsed.date)
+    }
+
+    @Test
+    fun `a BRIZZI top up has no date row, so the header date is used`() {
+        val parsed = runBlocking {
+            source.parseEmail(email(fixture("brizzi"), subject = "Top Up BRIZZI Berhasil"))
+        }.single()
+
+        assertEquals(50_000L, parsed.amount)
+        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("192685482301", parsed.reference)
+        // No seconds in the header, so the minute is as precise as it gets.
+        assertEquals(millis(2026, 8, 11, 7, 16, 0), parsed.date)
+    }
+
+    @Test
+    fun `the admin fee is part of what left the account`() {
+        val parsed = runBlocking {
+            source.parseEmail(
+                email(
+                    """
+                    Nomor Referensi 192779074268
+                    Tanggal Transaksi 11 Aug 2026, 10:30:27 WIB
+                    Jenis Transaksi Transfer Antar Bank
+                    Nominal Rp30.000
+                    Biaya Admin Rp2.500
+                    """.trimIndent(),
+                ),
+            )
+        }.single()
+
+        assertEquals(32_500L, parsed.amount)
+    }
+
+    @Test
+    fun `every receipt is claimed, and nothing else from the same sender is`() {
+        assertTrue(source.isEmailForProvider(email(fixture("qris"))))
+        assertTrue(source.isEmailForProvider(email(fixture("transfer"))))
+        assertTrue(source.isEmailForProvider(email(fixture("brizzi"))))
+
+        // A bank sends OTPs and promotions from the address the query matches.
         assertFalse(
             source.isEmailForProvider(
-                email(from = "noreply@bri.co.id", subject = "Promo BRI", body = "Diskon 50% untuk Anda"),
+                email("Kode OTP kamu adalah 123456. Jangan berikan ke siapa pun."),
             ),
         )
-        assertFalse(source.isEmailForProvider(email(from = "noreply@bca.co.id", body = notification)))
+        assertFalse(
+            source.isEmailForProvider(email("Promo cashback 50% untuk pengguna BRImo!")),
+        )
+        assertFalse(
+            source.isEmailForProvider(email(fixture("qris"), from = "promo@tokopedia.com")),
+        )
     }
 
     @Test
-    fun `parses a notification email`() {
-        val tx = parse(notification).single()
+    fun `an email with no amount is dropped rather than guessed at`() {
+        val parsed = runBlocking {
+            source.parseEmail(email("Nomor Referensi 192779074268\nJenis Transaksi QRIS Bayar"))
+        }
 
-        assertEquals(1_000_000L, tx.amount)
-        assertEquals("IDR", tx.currency)
-        assertEquals("PEMBAYARAN TOKOPEDIA", tx.description)
-        assertEquals(TransactionType.EXPENSE, tx.type)
-        assertNull(tx.reference)
-    }
-
-    @Test
-    fun `reads the date as day-month-year in the local zone`() {
-        val tx = parse(notification).single()
-
-        // 26/01/2026 is the 26th of January, not the 1st of the 26th month.
-        val parsed = Instant.ofEpochMilli(tx.date!!).atZone(ZoneId.systemDefault())
-        assertEquals(2026, parsed.year)
-        assertEquals(1, parsed.monthValue)
-        assertEquals(26, parsed.dayOfMonth)
-        assertEquals(10, parsed.hour)
-        assertEquals(30, parsed.minute)
-    }
-
-    @Test
-    fun `accepts a two digit year and a date without a time`() {
-        val tx = parse(
-            """
-            TANGGAL : 05/03/26
-            JUMLAH : Rp250.000
-            """.trimIndent(),
-        ).single()
-
-        val parsed = Instant.ofEpochMilli(tx.date!!).atZone(ZoneId.systemDefault())
-        assertEquals(2026, parsed.year)
-        assertEquals(3, parsed.monthValue)
-        assertEquals(5, parsed.dayOfMonth)
-        assertEquals(0, parsed.hour)
-        assertEquals(250_000L, tx.amount)
-    }
-
-    @Test
-    fun `reads both thousand separator conventions and bare digits`() {
-        fun amountOf(jumlah: String) = parse("TANGGAL : 26/01/2026\nJUMLAH : $jumlah").single().amount
-
-        assertEquals(1_000_000L, amountOf("Rp1.000.000,00"))
-        assertEquals(1_000_000L, amountOf("Rp1,000,000.00"))
-        assertEquals(1_000_000L, amountOf("Rp1000000"))
-        assertEquals(1_000_000L, amountOf("IDR 1.000.000"))
-        // No currency marker: the JUMLAH label carries it.
-        assertEquals(1_000_000L, amountOf("1.000.000"))
-    }
-
-    @Test
-    fun `classifies income and transfers`() {
-        fun typeOf(line: String) =
-            parse("TANGGAL : 26/01/2026\nJUMLAH : Rp10.000\n$line").single().type
-
-        assertEquals(TransactionType.INCOME, typeOf("TRANSAKSI : DANA MASUK"))
-        assertEquals(TransactionType.INCOME, typeOf("TRANSAKSI : KREDIT GAJI"))
-        assertEquals(TransactionType.TRANSFER, typeOf("TRANSAKSI : TRANSFER KE 1234"))
-        assertEquals(TransactionType.EXPENSE, typeOf("TRANSAKSI : PEMBAYARAN TOKOPEDIA"))
-    }
-
-    @Test
-    fun `picks up a reference when present`() {
-        val tx = parse("$notification\nREFERENSI : 987654321").single()
-
-        assertEquals("987654321", tx.reference)
-    }
-
-    @Test
-    fun `falls back to the html body when there is no plain text`() {
-        val html = "<html><body><p>TANGGAL : 26/01/2026 10:30:12</p>" +
-            "<p>JUMLAH : Rp1.000.000,00</p></body></html>"
-        val tx = runBlocking { source.parseEmail(email(html = html)) }.single()
-
-        assertEquals(1_000_000L, tx.amount)
-    }
-
-    @Test
-    fun `yields nothing when the essentials are missing`() {
-        // The app routes an unparsed email elsewhere; returning a half-built
-        // transaction would put a wrong amount in the ledger.
-        assertTrue(parse("").isEmpty())
-        assertTrue(parse("TANGGAL : 26/01/2026").isEmpty())
-        assertTrue(parse("JUMLAH : Rp1.000.000,00").isEmpty())
-        assertTrue(parse("TANGGAL : 32/13/2026\nJUMLAH : Rp1.000.000,00").isEmpty())
+        assertTrue(parsed.isEmpty())
     }
 }

@@ -1,142 +1,82 @@
 package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
+import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
 import dev.achmad.finbox.extension.TransactionSource
-import dev.achmad.finbox.extension.TransactionType
-import java.time.LocalDateTime
-import java.time.ZoneId
+import dev.achmad.finbox.lib.receipt.Receipt
+import dev.achmad.finbox.lib.receipt.detectType
 
 /**
- * Source for Bank BRI transaction notification emails.
+ * Source for BRImo transaction receipts.
  *
- * Typical body:
+ * They arrive as html tables, which the app flattens to one line per row:
  * ```
- * PEMBERITAHUAN TRANSAKSI
- * KARTU : 5241 08** **** 1234
- * TANGGAL : 26/01/2026 10:30:12
- * TRANSAKSI : PEMBAYARAN TOKOPEDIA
- * JUMLAH : Rp1.000.000,00
- * SALDO : Rp5.000.000,00
+ * Nomor Referensi 192779074268
+ * Tanggal Transaksi 11 Aug 2026, 10:30:27 WIB
+ * Jenis Transaksi QRIS Bayar
+ * Nama Merchant Warkop Maharani
+ * Nominal Rp13.000
+ * Biaya Admin Rp0
  * ```
+ * Every field is read by its label, because the layout differs per transaction
+ * type — QRIS, transfer and BRIZZI receipts share no common template, and BRI
+ * adds types without warning.
  *
- * Parsing is deliberately tolerant: it returns an empty list whenever amount
- * or date cannot be extracted, and the app drops the email.
+ * Parsing is deliberately tolerant: it returns an empty list whenever the
+ * amount cannot be extracted, and the app drops the email.
  */
 @Source
 class BriSource : TransactionSource {
 
+    // Every BRImo notification comes from this one address, whatever the
+    // transaction is. Subjects differ per type, so they are matched below.
+    override val emailQuery = EmailQuery.from("BankBRI@bri.co.id")
+
     override fun isEmailForProvider(email: EmailMessage): Boolean {
-        val from = email.from.lowercase()
-        if ("bri.co.id" !in from) return false
-        val text = email.bodyText.ifBlank { email.bodyHtml }
-        // A transaction mail always states an amount and a date.
-        return "jumlah" in text.lowercase() && "tanggal" in text.lowercase()
+        if ("bri.co.id" !in email.from.lowercase()) return false
+        val receipt = Receipt.of(email)
+        // A receipt states a reference number and what was charged. Statements,
+        // OTPs and promotions from the same address state neither.
+        return receipt.field(*REFERENCE) != null &&
+            (receipt.field(*AMOUNT) != null || receipt.field(*TOTAL) != null)
     }
 
     override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> {
-        val text = email.bodyText.ifBlank {
-            email.bodyHtml.replace(Regex("<[^>]+>"), "\n")
-        }
-        if (text.isBlank()) return emptyList()
+        val receipt = Receipt.of(email)
 
-        val amount = extractAmount(text) ?: return emptyList()
-        val date = extractDate(text) ?: return emptyList()
-        val type = detectType(text)
-        val description = extractField(text, "transaksi")
-            ?: extractField(text, "ket", "keterangan")
-            ?: email.subject.trim().ifBlank { null }
+        // Nominal is what was spent, Total is that plus the admin fee — the
+        // ledger wants what actually left the account.
+        val nominal = receipt.amount(*AMOUNT)
+        val fee = receipt.amount(*FEE) ?: 0L
+        val amount = nominal?.plus(fee) ?: receipt.amount(*TOTAL) ?: return emptyList()
+
+        val kind = receipt.field(*TYPE).orEmpty()
 
         return listOf(
             ParsedTransaction(
-                date = date,
+                // The body's timestamp is when BRI booked it; internalDate is
+                // when the mail arrived, which is close but not the same.
+                date = receipt.date(*DATE) ?: email.date,
                 amount = amount,
                 currency = "IDR",
-                type = type,
-                merchant = null,
-                description = description,
-                reference = extractField(text, "referensi", "ref"),
+                type = detectType(kind, email.subject),
+                merchant = receipt.field(*MERCHANT),
+                description = kind.ifBlank { email.subject.trim() }.ifBlank { null },
+                reference = receipt.field(*REFERENCE),
                 confidence = 0.9f,
             ),
         )
     }
 
-    private fun detectType(text: String): TransactionType {
-        val lower = text.lowercase()
-        return when {
-            lower.contains("masuk") || lower.contains("diterima") || lower.contains("kredit") ||
-                lower.contains("incoming") -> TransactionType.INCOME
-            lower.contains("transfer") || lower.contains("rekening") -> TransactionType.TRANSFER
-            else -> TransactionType.EXPENSE
-        }
-    }
-
-    /** Extracts the value of the first line starting with one of [labels] followed by a colon. */
-    private fun extractField(text: String, vararg labels: String): String? {
-        val pattern = labels.joinToString("|") { Regex.escape(it) }
-        val regex = Regex("(?i)(?:^|[\\r\\n])\\s*($pattern)\\s*[:\\.]?\\s*([^\\r\\n]+)")
-        val match = regex.find(text) ?: return null
-        val value = match.groupValues[2].trim().trimEnd(';').trim()
-        if (value.isEmpty() || value.matches(Regex("(?i)^${pattern}$"))) return null
-        return value
-    }
-
-    private fun extractAmount(text: String): Long? {
-        val rupiah = Regex("(?i)(?:Rp|IDR)\\s*([\\d.,]+)").find(text)
-            ?.groupValues?.get(1)
-        val bare = if (rupiah == null) {
-            Regex("(?i)(?:jumlah|amount|nominal)\\s*[:=]?\\s*([\\d.,]+)").find(text)
-                ?.groupValues?.get(1)
-        } else null
-        val raw = rupiah ?: bare ?: return null
-        return parseNumber(raw)
-    }
-
-    /** Parses "1.000.000,00", "1,000,000.00", "1000000" etc. into whole units. */
-    private fun parseNumber(raw: String): Long? {
-        val s = raw.trim().replace(" ", "")
-        if (s.isEmpty()) return null
-        val integerPart: String
-        when {
-            s.contains(',') && !s.contains('.') -> {
-                val i = s.lastIndexOf(',')
-                integerPart = s.substring(0, i).replace(",", "")
-            }
-            s.contains('.') && !s.contains(',') -> {
-                integerPart = s.replace(".", "")
-            }
-            s.contains(',') && s.contains('.') -> {
-                val i = if (s.lastIndexOf(',') > s.lastIndexOf('.')) s.lastIndexOf(',') else s.lastIndexOf('.')
-                integerPart = s.substring(0, i).replace(".", "").replace(",", "")
-            }
-            else -> integerPart = s
-        }
-        return integerPart.toLongOrNull()
-    }
-
-    private fun extractDate(text: String): Long? {
-        val match = Regex(
-            "(?i)(?:tanggal|date)\\s*[:=]?\\s*(\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4})(?:\\s+[,-]?\\s*(\\d{1,2}:\\d{2}(?::\\d{2})?))?",
-        ).find(text) ?: return null
-
-        val parts = match.groupValues[1].split('/', '.', '-').map { it.toInt() }
-        if (parts.size != 3) return null
-        val (day, month, yearRaw) = parts
-        val year = if (yearRaw < 100) yearRaw + 2000 else yearRaw
-
-        val time = match.groupValues[2]
-        val hm = if (time.isNotBlank()) {
-            time.split(':').map { it.toInt() }.let { it[0] to it[1] }
-        } else 0 to 0
-
-        return try {
-            LocalDateTime.of(year, month, day, hm.first, hm.second)
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
-        } catch (e: Exception) {
-            null
-        }
+    private companion object {
+        val AMOUNT = arrayOf("Nominal")
+        val FEE = arrayOf("Biaya Admin")
+        val TOTAL = arrayOf("Total Transaksi", "Total")
+        val REFERENCE = arrayOf("Nomor Referensi", "No. Ref", "No Ref")
+        val DATE = arrayOf("Tanggal Transaksi", "Tanggal")
+        val TYPE = arrayOf("Jenis Transaksi")
+        val MERCHANT = arrayOf("Nama Merchant", "Nama Tujuan")
     }
 }

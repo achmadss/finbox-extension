@@ -1,0 +1,16 @@
+Halo,NAMA NASABAH
+Berikut ini adalah informasi transaksi yang telah Anda lakukan di Aplikasi BRImo.
+Transaksi Berhasil
+Tanggal 13 Agustus 2026 , 09:16:10 WIB
+Nomor Referensi 193865864645
+Sumber Dana NAMA NASABAH
+2171 **** **** 508
+Jenis Transaksi Transfer Bank BRI
+Bank Tujuan BANK BRI
+Nomor Tujuan 0426 **** **** 507
+Nama Tujuan NAMA PENERIMA
+Catatan brizzi
+Nominal Rp30.000
+Biaya Admin Rp0
+Total Rp30.000
+Semoga informasi ini dapat bermanfaat bagi Anda. Call Center di nomor 1500017

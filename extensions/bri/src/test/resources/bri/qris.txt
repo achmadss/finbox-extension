@@ -1,0 +1,30 @@
+Halo NAMA NASABAH,
+Berikut detail transaksi kamu di BRImo:
+Total Transaksi
+13.000
+Tujuan
+Warkop Maharani
+QRIS Bayar
+9360000210114117556
+Nomor Referensi 192779074268
+Tanggal Transaksi 11 Aug 2026, 10:30:27 WIB
+Rekening Sumber Dana 2171 **** **** 508
+Nama Sumber Dana NAMA NASABAH
+Jenis Transaksi QRIS Bayar
+Nama Merchant Warkop Maharani
+Lokasi Merchant JAKARTA SELAT
+Nama Penerbit BRI
+Nama Pengakuisisi BRI
+Kode PAN Pelanggan 9360000210114117556
+Merchant PAN 936000020011930998
+ID Terminal A01
+Catatan mie
+Nominal Rp13.000
+Biaya Admin Rp0
+INFORMASI:
+Biaya Termasuk PPN (Apabila Dikenakan/Apabila Ada)
+PT. Bank Rakyat Indonesia (Persero) Tbk.
+Semoga info ini bermanfaat buat kamu, ya.
+Contact Center BRI 1500017
+Email callbri@bri.co.id
+Terima kasih sudah menggunakan BRImo.

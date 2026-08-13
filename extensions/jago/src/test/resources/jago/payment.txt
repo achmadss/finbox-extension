@@ -1,0 +1,33 @@
+Hello NAMA NASABAH,
+Thank you for trusting Jago! You have made a payment, and here are the details:
+Transaction Summary
+From
+100000000000
+To
+BEl Shop
+9360000000000000001
+Amount
+Rp 2.000
+Transaction Date
+05 August 2026, 13:23 WIB
+Transaction Status
+Successful
+Acquirer Name
+Bank Mandiri
+Merchant Location
+Bogor (Kab)
+Terminal ID
+A01
+Customer PAN
+9360000000000000000
+Tip Amount
+Rp 0
+Funds have been sent. If you experience a delay on the recipient’s end, please click for assistance.
+You can view the transaction history in your Pocket Details inside the Jago app.
+Let us help you make your life hassle-free! Create a Spending Pocket to make your daily transactions easier with the Pockets feature.
+Create Spending Pocket
+From saving, transacting, to investing, do it all your way.
+Enjoy managing your money with Jago, the way you want
+Need help?
+You can contact Tanya Jago at 1500 746 or tanya@jago.com.
+PT Bank Jago Tbk is licensed and supervised by Financial Services Authority (OJK), and also a member of LPS deposit insurance program.

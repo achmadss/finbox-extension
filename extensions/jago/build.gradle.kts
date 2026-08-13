@@ -3,9 +3,9 @@ plugins {
 }
 
 finbox {
-    name = "Bank BRI"
-    provider = "bri"
-    versionCode = 5
+    name = "Bank Jago"
+    provider = "jago"
+    versionCode = 1
 }
 
 dependencies {
