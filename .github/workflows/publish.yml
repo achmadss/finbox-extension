@@ -1,20 +1,9 @@
 name: Publish
 
-# Only paths that end up inside an APK. A rebuilt APK is not byte-identical, so
-# a README push would otherwise republish every extension under a new hash and
-# make the app re-download both.
+# By hand. Publishing is a decision — a merge to main is not one, and a rebuilt
+# APK is not byte-identical, so an automatic run would hand the app new hashes
+# for versions it already has.
 on:
-  push:
-    branches: [main]
-    paths:
-      - extensions/**
-      - lib/**
-      - compiler/**
-      - build-logic/**
-      - tools/**
-      - gradle.properties
-      - build.gradle.kts
-      - .github/workflows/publish.yml
   workflow_dispatch:
 
 # Two publishes at once would race on repo/index.json.
@@ -51,8 +40,8 @@ jobs:
           mkdir -p ~/.android
           echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
 
-      # Runs the tests, builds only the extensions whose versionCode has no APK
-      # in repo/apk yet, and regenerates the index.
+      # Runs the tests, builds only the extensions with no APK for the version
+      # they currently declare, and regenerates the index.
       - run: ./tools/publish.sh
 
       - name: Commit the repo

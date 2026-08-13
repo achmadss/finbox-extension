@@ -51,22 +51,22 @@ def publish_icon(provider: str) -> str | None:
     return f"{BASE_URL}/icon/{provider}.png"
 
 
-def targets() -> int:
-    """Print the assembleRelease task of every extension whose APK is missing.
+def declared() -> dict[str, tuple[str, str, int]]:
+    """provider -> (module, versionName, versionCode), read from the build files.
 
-    A published version is final: the APK is named after `finbox.apiVersion` and
-    the module's versionCode, and the index carries its sha256. Rebuilding one
-    that is already in repo/apk would publish a hash the app has not seen for a
-    version it has, since two builds of the same source are not byte-identical.
-    So the presence of the file is the whole check — bump versionCode to
-    republish, exactly as CONTRIBUTING says.
+    gradle.properties and the `finbox {}` blocks between them name the APK every
+    extension should have in repo/apk, since the gradle plugin builds it as
+    `finbox-<provider>-<apiVersion>.<versionCode>.apk`. That name is the whole
+    of the up-to-date check: raising a versionCode makes one file missing, and
+    raising finbox.apiVersion makes all of them missing at once, which is what
+    an API bump should mean — every extension is compiled against it.
     """
     properties = (ROOT / "gradle.properties").read_text()
     api_version = re.search(r"^finbox\.apiVersion=(.+)$", properties, re.M)
     if not api_version:
-        print("finbox.apiVersion is not set in gradle.properties", file=sys.stderr)
-        return 1
+        sys.exit("finbox.apiVersion is not set in gradle.properties")
 
+    modules = {}
     for module in sorted((ROOT / "extensions").iterdir()):
         build_file = module / "build.gradle.kts"
         if not build_file.exists():
@@ -77,34 +77,51 @@ def targets() -> int:
         if not provider or not version_code:
             print(f"warning: {module.name} declares no provider/versionCode", file=sys.stderr)
             continue
-        apk = f"finbox-{provider[1]}-{api_version[1].strip()}.{version_code[1]}.apk"
-        if not (APK_DIR / apk).exists():
-            print(f":extensions:{module.name}:assembleRelease")
+        version_name = f"{api_version[1].strip()}.{version_code[1]}"
+        modules[provider[1]] = (module.name, version_name, int(version_code[1]))
+    return modules
+
+
+def apk_of(provider: str, version_name: str) -> pathlib.Path:
+    return APK_DIR / f"finbox-{provider}-{version_name}.apk"
+
+
+def targets() -> int:
+    """Print the assembleRelease task of every extension whose APK is missing.
+
+    A published version is final: the index carries its sha256, and two builds
+    of the same source are not byte-identical, so rebuilding one already in
+    repo/apk would hand the app a new hash for a version it has.
+    """
+    for provider, (module, version_name, _) in sorted(declared().items()):
+        if not apk_of(provider, version_name).exists():
+            print(f":extensions:{module}:assembleRelease")
     return 0
 
 
 def main() -> int:
-    apks = sorted(APK_DIR.glob("*.apk"))
-    if not apks:
-        print("No APKs found in repo/apk/. Build first: ./gradlew assembleRelease", file=sys.stderr)
+    modules = declared()
+    if not modules:
+        print("No extensions found in extensions/.", file=sys.stderr)
         return 1
 
-    # One entry per provider: the app keys its lists by pkg, so a superseded APK
-    # left behind by an earlier build would publish the same extension twice.
-    newest: dict[str, tuple[int, pathlib.Path]] = {}
-    for apk in apks:
-        provider = apk.stem.split("-")[1]
-        version_code = int(apk.stem.split("-")[2].lstrip("v").split(".")[-1])
-        if version_code > newest.get(provider, (0, None))[0]:
-            newest[provider] = (version_code, apk)
-    for apk in apks:
-        if apk not in (a for _, a in newest.values()):
+    current = {apk_of(provider, name) for provider, (_, name, _) in modules.items()}
+    missing = sorted(apk.name for apk in current if not apk.exists())
+    if missing:
+        print(f"No APK for {', '.join(missing)}. Build first: ./tools/publish.sh", file=sys.stderr)
+        return 1
+
+    # The modules say what is current, so anything else in repo/apk is a version
+    # that has been superseded. Leaving one behind would publish the same
+    # extension twice, and the app keys its lists by pkg.
+    for apk in sorted(APK_DIR.glob("*.apk")):
+        if apk not in current:
             print(f"Dropping superseded {apk.name}")
             apk.unlink()
 
     entries = []
-    for provider, (version_code, apk) in sorted(newest.items()):
-        version_name = apk.stem.split("-")[2].lstrip("v")
+    for provider, (_, version_name, version_code) in sorted(modules.items()):
+        apk = apk_of(provider, version_name)
         entry = {
             "name": NAMES.get(provider, provider.title()),
             "provider": provider,

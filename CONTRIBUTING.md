@@ -134,20 +134,32 @@ supply it.
 git add repo && git commit -m "Publish extensions" && git push
 ```
 
-That runs the tests, builds the release APK of every extension whose
-`versionCode` has no APK in `repo/apk/` yet, and regenerates `repo/index.json`,
-which carries each APK's sha256. Always publish through the script: a rebuilt
-APK is not byte-identical, so a hand-edited index publishes a hash the app will
-reject on install.
+That runs the tests, builds the release APKs that are missing, and regenerates
+`repo/index.json`, which carries each APK's sha256. Always publish through the
+script: a rebuilt APK is not byte-identical, so a hand-edited index publishes a
+hash the app will reject on install.
 
-Bump `versionCode` in `finbox {}` for every published change — including one
-that only touches `lib/receipt`, since that is compiled into your APK. Without a
-bump the script finds the APK already there and builds nothing, which is the
-point: an unchanged version keeps the sha256 the app already knows.
+Missing is decided by name. The plugin writes
+`repo/apk/finbox-<provider>-<apiVersion>.<versionCode>.apk`, so what gets built
+follows from the two things that name it:
 
-Pushing to `main` does all of the above in `.github/workflows/publish.yml` and
-commits the result, so publishing by hand is only for trying it locally. The
-workflow restores the debug keystore from the `DEBUG_KEYSTORE` secret — release
+- **Bump `versionCode`** in `finbox {}` and that extension alone is rebuilt. Do
+  it for every published change, including one that only touches `lib/receipt`,
+  since that is compiled into your APK.
+- **Bump `finbox.apiVersion`** and every extension is rebuilt, which is what an
+  API change means — they are all compiled against it.
+- **Change neither** and nothing is built. That is the point: an untouched
+  version keeps the sha256 the app already knows.
+
+Anything left in `repo/apk/` that no module currently declares is deleted, so a
+superseded APK cannot publish the same extension twice.
+
+Or let CI do it — Actions → **Publish** → Run workflow, or `gh workflow run
+publish.yml`. It runs the same script and commits `repo/`. Deliberately manual:
+publishing is a decision, and a merge to `main` is not one.
+
+The workflow restores the debug keystore from the `DEBUG_KEYSTORE` secret
+(`base64 -i ~/.android/debug.keystore | gh secret set DEBUG_KEYSTORE`). Release
 APKs are signed with the debug config, and Android refuses an update signed by a
 different key than the installed APK, so a runner's own generated key would make
 every published extension uninstallable over the old one.
