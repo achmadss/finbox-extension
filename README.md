@@ -1,133 +1,34 @@
 # finbox-extension
 
-Sources for [finbox-android](https://github.com/achmadss/finbox-android), the
-email transaction importer. Each extension is a small Android APK holding one
-source — BRI, Jago, Gojek — which tells the app which emails to fetch,
-confirms the ones that are really transactions, and converts them into a
-standardized format. No launcher activity; loaded in-process by the
-app via a child-first classloader.
+Parsers for [finbox](https://github.com/achmadss/finbox-android), the app that
+turns the receipts your bank emails you into a spending ledger.
+
+One provider, one APK. An extension holds nothing but the knowledge of how a
+particular bank writes its notification mails: which address they come from,
+which of them are really transactions, and where the amount, date and merchant
+sit inside them. The app supplies the mailbox; a parser supplies the meaning.
+
+They are ordinary Android APKs with no launcher activity, published to
+`repo/` and installed by the app, which verifies each against its hash and
+loads it in-process through a child-first classloader. Adding a bank needs no
+app release.
+
+## Available
+
+| Provider | Emails it reads |
+|---|---|
+| Bank BRI | BRImo receipts — QRIS, transfers, BRIZZI top ups |
+| Bank Jago | payments, transfers, Jago Partner, debit card purchases |
 
 ## Layout
 
 | Path | Purpose |
 |---|---|
-| `build-logic/` | `finbox.plugins.extension` Gradle plugin (manifest generation, versioning, APK copy) |
-| `compiler/` | KSP processor turning the module's `@Source` class into the generated entry point |
-| `extensions/<provider>/` | One module per provider (bri, jago, bca, gopay, ...) |
-| `repo/` | Published artifacts: APKs + `index.json` served to the app |
-| `tools/` | `update-repo.py` (index generation), `publish.sh` (build + index) |
+| `extensions/<provider>/` | One module per provider |
+| `lib/receipt/` | Shared receipt reading — labels, money, dates — compiled into each APK |
+| `build-logic/` | The Gradle plugin every extension applies |
+| `compiler/` | KSP processor that generates each APK's entry point |
+| `repo/` | Published APKs and the `index.json` the app fetches |
+| `tools/` | Publishing and API scripts |
 
-## Adding a source
-
-1. `mkdir extensions/<provider>` with `build.gradle.kts`:
-
-   ```kotlin
-   plugins { id("finbox.plugins.extension") }
-
-   finbox {
-       name = "Bank BRI"
-       provider = "bri"
-       versionCode = 1
-   }
-   ```
-
-2. Implement `dev.achmad.finbox.extension.TransactionSource` in package
-   `dev.achmad.finbox.extension.<provider>` and annotate it with `@Source`:
-
-   ```kotlin
-   @Source
-   class BriSource : TransactionSource {
-       override val emailQuery = EmailQuery(from = listOf("bri.co.id"))
-       override fun isEmailForProvider(email: EmailMessage): Boolean { /* ... */ }
-       override suspend fun parseEmail(email: EmailMessage): List<ParsedTransaction> { /* ... */ }
-   }
-   ```
-
-   `emailQuery` is what the app asks Gmail for — narrow it to the provider's
-   senders, and never put dates in it: the app adds the import window the user
-   chose. It only decides what gets *downloaded*. `isEmailForProvider` then
-   decides what is actually a transaction, because a bank sends statements,
-   OTPs and promos from the same address. A source declaring an empty query is
-   rejected at load, since it would pull the whole mailbox.
-
-   Behaviour only — the source carries no name, version or id. The `:compiler`
-   KSP processor generates `GeneratedSource`, a delegate with a fixed name that
-   the manifest's `finbox.extension.class` points at; the app takes the identity
-   from the manifest instead (id is `MD5("name.lowercase()/versionCode")`,
-   stable across releases so stored transactions keep matching).
-
-   Exactly one `@Source` class per module — one provider per APK. Getting this
-   wrong (missing annotation, two of them, abstract class, constructor
-   arguments) is a build error rather than a load failure on someone's phone.
-3. Register the module in `settings.gradle.kts`.
-
-## The source API
-
-`TransactionSource`, `EmailQuery`, `EmailMessage` and `ParsedTransaction` come from
-finbox-android's `:extension-api`, published via JitPack and pinned in
-`gradle.properties`:
-
-```properties
-finbox.apiVersion=1.1
-```
-
-The plugin adds it as `compileOnly` — the app supplies the real classes at
-runtime through its child-first classloader — and stamps the same value into
-each APK's `finbox.extension.lib` metadata, which the app checks on load.
-Set the property to a release tag or a finbox-android commit hash; JitPack
-resolves both.
-
-Iterating on the API itself? `tools/update-api.sh` republishes it from a
-sibling finbox-android checkout into `~/.m2` and rebuilds here — the
-`mavenLocal()` entry in `settings.gradle.kts` picks it up ahead of JitPack:
-
-```
-./tools/update-api.sh            # or FINBOX_ANDROID=/path/to/finbox-android ./tools/update-api.sh
-```
-
-The version stays `1.0` across API changes, so Gradle would otherwise keep
-serving the cached jar; the script passes `--refresh-dependencies` for you.
-
-The Kotlin version pinned in the root `build.gradle.kts` must match the one
-finbox-android builds the API with, or its metadata is unreadable here.
-
-## Tests
-
-```
-./gradlew :extensions:<provider>:testDebugUnitTest
-```
-
-Plain JUnit on the JVM. Everything the plugin declares `compileOnly` is a real
-`testImplementation` dependency, since tests run without the app to supply it.
-KSP is disabled for test compilations — the `@Source` class lives in `main`.
-
-## Versioning
-
-`finbox { versionCode }` becomes the APK's real `versionCode`, and its
-`versionName` is `<apiVersion>.<versionCode>` — 1.0.1, 1.0.2, ... The app reads
-both from the package itself rather than from custom metadata, and treats a
-missing `versionName` as a load error instead of substituting a default.
-
-`finbox.extension.lib` metadata states the API version explicitly; if it is ever
-absent the app falls back to everything before the last dot of the versionName,
-which is the same value by construction. `tools/update-repo.py` derives
-`lib_version` in `index.json` the same way.
-
-## Publishing
-
-```bash
-./tools/publish.sh        # builds, copies APKs to repo/apk/, regenerates index.json
-git add repo && git commit -m "Publish extensions" && git push
-```
-
-The app fetches `repo/index.json` from the `main` branch and verifies each APK
-against its `sha256` before installing. Bump `versionCode` in the module's
-`finbox {}` block for updates.
-
-## libVersion
-
-`finbox.extension.lib` in the manifest must be `1.1` (checked by the app's
-loader, which rejects unknown versions with a clear error). It comes from
-`finbox.apiVersion`; bump both only when the source API changes incompatibly —
-the app must ship the matching version too. 1.0 → 1.1 was such a change:
-`TransactionParser` became `TransactionSource` and gained `emailQuery`.
+Writing one? See [CONTRIBUTING.md](CONTRIBUTING.md).
