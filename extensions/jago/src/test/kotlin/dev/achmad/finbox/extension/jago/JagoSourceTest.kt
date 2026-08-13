@@ -109,9 +109,8 @@ class JagoSourceTest {
         assertEquals(33_189L, parsed.amount)
         assertEquals(TransactionType.EXPENSE, parsed.type)
         assertEquals(arrived, parsed.date)
+        // Nothing but an amount: no summary means no merchant to name.
         assertNull(parsed.merchant)
-        // Nothing but an amount — worth less than a full summary.
-        assertTrue(parsed.confidence < 0.9f)
     }
 
     @Test

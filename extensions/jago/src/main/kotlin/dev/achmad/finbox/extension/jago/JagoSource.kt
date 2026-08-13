@@ -26,8 +26,8 @@ import dev.achmad.finbox.lib.receipt.detectType
  * nothing — [Receipt.field] strips it.
  *
  * A debit card purchase is the odd one out: no summary at all, just a sentence
- * stating the amount. It carries no date and no merchant, so it is parsed at a
- * lower confidence.
+ * stating the amount. It carries no date and no merchant either, so it is read
+ * against the mail's own arrival time.
  *
  * Nothing here carries a reference number — Jago simply does not send one — so
  * transactions are identified by their email alone.
@@ -60,7 +60,6 @@ class JagoSource : TransactionSource {
                 merchant = receipt.field(*MERCHANT)?.takeIf { summarised },
                 description = email.subject.trim().ifBlank { null },
                 reference = null,
-                confidence = if (summarised) 0.9f else 0.6f,
             ),
         )
     }

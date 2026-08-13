@@ -4,22 +4,22 @@
       "name": "Bank BRI",
       "provider": "bri",
       "pkg": "dev.achmad.finbox.extension.bri",
-      "version_code": 6,
-      "version_name": "1.3.6",
-      "lib_version": "1.3",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.3.6.apk",
-      "sha256": "070c74a851c56fe2f8dd11397469afda9aa0c91a54ddcb274e92fe55dcb2beed",
+      "version_code": 7,
+      "version_name": "1.4.7",
+      "lib_version": "1.4",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.4.7.apk",
+      "sha256": "26a3816b258659effa0676a90b2078c078fdf04967e899cd8aac55e46db9c51a",
       "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/bri.png"
     },
     {
       "name": "Bank Jago",
       "provider": "jago",
       "pkg": "dev.achmad.finbox.extension.jago",
-      "version_code": 2,
-      "version_name": "1.3.2",
-      "lib_version": "1.3",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-jago-1.3.2.apk",
-      "sha256": "a84f229362f0b621aa71e4633d5298945a27d0ed869224ffd90ab8411a0758ce",
+      "version_code": 3,
+      "version_name": "1.4.3",
+      "lib_version": "1.4",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-jago-1.4.3.apk",
+      "sha256": "f443a157cbfad5698f547cf088d8dc66348665993e1ee2e697d661cd369a51ba",
       "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/jago.png"
     }
   ]

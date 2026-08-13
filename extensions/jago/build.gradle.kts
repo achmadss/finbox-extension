@@ -5,7 +5,7 @@ plugins {
 finbox {
     name = "Bank Jago"
     provider = "jago"
-    versionCode = 2
+    versionCode = 3
 }
 
 dependencies {

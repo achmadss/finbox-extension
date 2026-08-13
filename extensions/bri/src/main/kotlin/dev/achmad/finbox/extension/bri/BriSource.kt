@@ -65,7 +65,6 @@ class BriSource : TransactionSource {
                 merchant = receipt.field(*MERCHANT),
                 description = kind.ifBlank { email.subject.trim() }.ifBlank { null },
                 reference = receipt.field(*REFERENCE),
-                confidence = 0.9f,
             ),
         )
     }
