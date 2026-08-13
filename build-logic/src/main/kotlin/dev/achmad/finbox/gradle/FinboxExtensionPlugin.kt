@@ -116,7 +116,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
             }
 
             val deps = dependencies
-            deps.add("compileOnly", "com.github.achmadss.finbox-android:extension-api:$apiVersion")
+            deps.add("compileOnly", "com.github.achmadss:finbox-android:$apiVersion")
             // The API arrives as a published AAR now, so the stdlib no longer comes
             // along transitively the way a project dependency did. Everything here is
             // compileOnly: the app already ships these at runtime.
@@ -133,7 +133,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
 
             // Unit tests run on the JVM without the app, so what is compileOnly above
             // has to be a real dependency here.
-            deps.add("testImplementation", "com.github.achmadss.finbox-android:extension-api:$apiVersion")
+            deps.add("testImplementation", "com.github.achmadss:finbox-android:$apiVersion")
             deps.add("testImplementation", "org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
             deps.add("testImplementation", "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
             deps.add("testImplementation", "org.jsoup:jsoup:1.18.3")

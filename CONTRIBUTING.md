@@ -3,21 +3,10 @@
 Adding a bank means writing one class and publishing one APK. The app needs no
 change and no release, and this repo is all you need checked out.
 
-## Setup
-
-The parser API is published to GitHub Packages, which authenticates reads even
-for a public package. Once, before your first build:
-
-1. Create a personal access token (classic) with the **`read:packages`** scope.
-2. Put it in `~/.gradle/gradle.properties` — never in this repo:
-
-   ```properties
-   gpr.user=<your github username>
-   gpr.key=<the token>
-   ```
-
-`GITHUB_ACTOR` / `GITHUB_TOKEN` in the environment work too, which is what CI
-uses.
+Clone it and build — there is nothing to set up, no account and no token. The
+parser API comes from JitPack, which builds it from finbox-android on demand.
+The first build of a version JitPack has not seen takes a minute or two while
+it does that.
 
 ## Add a source
 
@@ -165,24 +154,14 @@ working; a change that breaks them raises the floor and every APK below it must
 be rebuilt. If your extension stops loading after an app update, that is what
 happened — rebuild against the new `finbox.apiVersion` and republish.
 
-Changing the API itself lives in finbox-android, and is the one job that needs
-both repos. Two ways round:
+Changing the API itself lives in finbox-android. Push it there, then set
+`finbox.apiVersion` here to a tag or a commit hash — JitPack resolves both and
+builds that revision the first time anyone asks for it. A commit hash is the
+honest choice while an API is still moving; tag it once it settles.
 
-**Published.** Bump `apiVersion` there, run its **Publish extension-api**
-workflow (`workflow_dispatch`), then point `finbox.apiVersion` here at the new
-version. Nothing local required. GitHub Packages will not overwrite a version
-that already exists, so the bump is not optional.
-
-**Local, while iterating.** With a finbox-android checkout beside this one:
-
-```bash
-./tools/update-api.sh    # or FINBOX_ANDROID=/path/to/finbox-android ./tools/update-api.sh
-```
-
-That republishes `:extension-api` into `~/.m2`, which `mavenLocal()` picks up
-ahead of GitHub Packages, and rebuilds here with `--refresh-dependencies` —
-needed because the coordinates do not change when you iterate. Publish it
-properly before anyone else needs to build.
+JitPack is the only source: no `mavenLocal()`, on purpose. A jar published on
+one machine would build there and nowhere else, and the first person to notice
+would be a contributor whose clone does not compile.
 
 The Kotlin version pinned in the root `build.gradle.kts` must match the one
 finbox-android builds the API with, or the published metadata is unreadable
