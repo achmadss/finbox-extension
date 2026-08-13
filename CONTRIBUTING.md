@@ -1,7 +1,23 @@
 # Contributing
 
 Adding a bank means writing one class and publishing one APK. The app needs no
-change and no release.
+change and no release, and this repo is all you need checked out.
+
+## Setup
+
+The parser API is published to GitHub Packages, which authenticates reads even
+for a public package. Once, before your first build:
+
+1. Create a personal access token (classic) with the **`read:packages`** scope.
+2. Put it in `~/.gradle/gradle.properties` — never in this repo:
+
+   ```properties
+   gpr.user=<your github username>
+   gpr.key=<the token>
+   ```
+
+`GITHUB_ACTOR` / `GITHUB_TOKEN` in the environment work too, which is what CI
+uses.
 
 ## Add a source
 
@@ -149,16 +165,24 @@ working; a change that breaks them raises the floor and every APK below it must
 be rebuilt. If your extension stops loading after an app update, that is what
 happened — rebuild against the new `finbox.apiVersion` and republish.
 
-Changing the API itself lives in finbox-android. After editing it there:
+Changing the API itself lives in finbox-android, and is the one job that needs
+both repos. Two ways round:
+
+**Published.** Bump `apiVersion` there, run its **Publish extension-api**
+workflow (`workflow_dispatch`), then point `finbox.apiVersion` here at the new
+version. Nothing local required. GitHub Packages will not overwrite a version
+that already exists, so the bump is not optional.
+
+**Local, while iterating.** With a finbox-android checkout beside this one:
 
 ```bash
 ./tools/update-api.sh    # or FINBOX_ANDROID=/path/to/finbox-android ./tools/update-api.sh
 ```
 
 That republishes `:extension-api` into `~/.m2`, which `mavenLocal()` picks up
-ahead of JitPack, and rebuilds here with `--refresh-dependencies` — needed
-because the coordinates do not change when you iterate. For anyone else to
-build it, that version must exist as a tag in finbox-android.
+ahead of GitHub Packages, and rebuilds here with `--refresh-dependencies` —
+needed because the coordinates do not change when you iterate. Publish it
+properly before anyone else needs to build.
 
 The Kotlin version pinned in the root `build.gradle.kts` must match the one
 finbox-android builds the API with, or the published metadata is unreadable

@@ -3,9 +3,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Republishes finbox-android's :extension-api into ~/.m2 so this repo picks it
-# up ahead of JitPack (see mavenLocal() in settings.gradle.kts). Run it after
-# every API change over there — the version stays "1.0" while iterating, so
-# nothing else signals that the artifact moved.
+# up ahead of GitHub Packages (see mavenLocal() in settings.gradle.kts). Only
+# needed while iterating on the API locally; otherwise publish it there and
+# point finbox.apiVersion at the released version. Run it after every API change
+# over there — the version does not move while iterating, so nothing else
+# signals that the artifact did.
 API_REPO="${FINBOX_ANDROID:-$(cd .. && pwd)/finbox-android}"
 API_VERSION=$(sed -n 's/^finbox\.apiVersion=//p' gradle.properties)
 
