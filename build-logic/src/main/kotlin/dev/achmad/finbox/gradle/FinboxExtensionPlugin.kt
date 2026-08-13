@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
  *   `finbox.extension.lib` metadata and a fixed `finbox.extension.class`,
  *   which the KSP processor in `:compiler` generates from the module's
  *   `@Source` class
+ * - Icon comes from the module's own `src/main/res/mipmap-<density>` launcher
+ *   icons; the app reads it straight out of the APK
  * - `compileOnly` against the published parser API so the app provides the
  *   real classes at runtime (see the `finbox.apiVersion` gradle property)
  * - Copies the release APK to `repo/apk/finbox-<provider>-<version>.apk`
@@ -145,7 +147,7 @@ class FinboxExtensionPlugin : Plugin<Project> {
             <uses-feature
                 android:name="dev.achmad.finbox.extension"
                 android:required="true" />
-            <application>
+            <application android:icon="@mipmap/ic_launcher">
                 <meta-data
                     android:name="finbox.extension.lib"
                     android:value="$apiVersion" />
