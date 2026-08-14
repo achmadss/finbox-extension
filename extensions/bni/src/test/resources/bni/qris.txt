@@ -1,0 +1,27 @@
+Transaksi berhasil!
+Hai, NAMA NASABAH
+Terima kasih udah bertransaksi dengan wondr by BNI! Kamu baru aja bayar pakai QRIS dengan detail sebagai berikut:
+Penerima
+QRIS INDOMARET
+TANGERANG ID
+Sumber dana
+NAMA NASABAH
+TAPLUS • *****171
+Tanggal & waktu transaksi
+Tanggal 11 Agu 2026
+Waktu 20:43:33 WIB
+Detail pembayaran
+Nominal Rp23.500
+Total Rp23.500
+Detail merchant
+Merchant ID 614546239
+Merchant PAN 9360000911065317205
+Nama acquirer Bank Negara Indonesia
+Detail transaksi
+Customer PAN -
+Nama issuer Bank Negara Indonesia
+Jenis transaksi QRIS
+Reference ID 202608110843260325
+Kode RRN RCA085192794
+Butuh bantuan?
+BNI Call 1500046

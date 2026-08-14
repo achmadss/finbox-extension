@@ -96,12 +96,13 @@ val receipt = Receipt.of(email)     // flattens html to one line per row
 receipt.field("Nomor Referensi", "No. Ref")   // label → value, same line or next
 receipt.amount("Nominal")                     // "Rp 1.151.800" → 1151800
 receipt.date("Tanggal Transaksi")             // honours a stated WIB/WITA/WIT
+receipt.splitDate()                           // a day and a clock on two rows (BNI, Mandiri)
 receipt.statedAmount()                        // the first "Rp …" in prose
 detectType(kind, email.subject)               // INCOME / TRANSFER / EXPENSE
 ```
 
-Two layouts are already handled: label and value on one line (BRI) and on two,
-with or without a colon (Jago). If a new bank breaks something here, fix it
+Two layouts are already handled: label and value on one line (BRI, BNI,
+Mandiri) and on two, with or without a colon (Jago). If a new bank breaks something here, fix it
 here — that is why it is a library and not copied into each parser.
 
 Anything genuinely shared belongs in `lib/`, never in `extension-api`. The API

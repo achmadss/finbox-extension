@@ -33,7 +33,7 @@ import dev.achmad.finbox.lib.receipt.detectType
  * the user's own pockets, not out of them.
  *
  * Nothing here carries a reference number — Jago simply does not send one — so
- * transactions are identified by their email alone.
+ * the app falls back to the Gmail thread, then the email, for transaction identity.
  */
 @Source
 class JagoSource : TransactionSource {

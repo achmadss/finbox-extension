@@ -88,6 +88,21 @@ class ReceiptTest {
     }
 
     @Test
+    fun `a day and a clock on separate rows are one timestamp`() {
+        // BNI, hyphenated and headed by a label that is not the date's own.
+        val bni = Receipt(
+            listOf("Tanggal & waktu transaksi", "Tanggal 03-Agu-2026", "Waktu 06:23:30 WIB"),
+        )
+        assertEquals(wib(2026, 8, 3, 6, 23, 30), bni.splitDate())
+
+        // Mandiri, which calls the clock something else again.
+        val mandiri = Receipt(listOf("Tanggal 27 Jul 2026", "Jam 15:22:45 WIB"))
+        assertEquals(wib(2026, 7, 27, 15, 22, 45), mandiri.splitDate())
+
+        assertNull(Receipt(listOf("Nominal Investasi IDR 100.000.000,00")).splitDate())
+    }
+
+    @Test
     fun `Indonesian and English month names, with or without the comma`() {
         assertEquals(wib(2026, 8, 13, 9, 16, 10), parseTimestamp("13 Agustus 2026 , 09:16:10 WIB"))
         assertEquals(wib(2026, 8, 11, 19, 56), parseTimestamp("11 August 2026 19:56 WIB"))

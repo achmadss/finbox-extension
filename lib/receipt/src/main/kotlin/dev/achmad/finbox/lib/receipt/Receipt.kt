@@ -49,6 +49,23 @@ class Receipt(val lines: List<String>) {
     fun date(vararg labels: String): Long? =
         field(*labels)?.let(::parseTimestamp) ?: lines.firstNotNullOfOrNull(::parseTimestamp)
 
+    /**
+     * The timestamp of a receipt that states the day and the clock as two rows:
+     * "Tanggal 03-Agu-2026" then "Waktu 06:23:30 WIB" (BNI), "Tanggal 27 Jul
+     * 2026" then "Jam 15:22:45 WIB" (Mandiri).
+     *
+     * Found by shape rather than by label, because both banks head the section
+     * with a label of its own — "Tanggal & waktu transaksi" is what [field]
+     * would answer with. The clock is taken from the day's own line or below it,
+     * never above, so an unrelated time earlier in the mail cannot win. The zone
+     * travels with the clock, hence the two parsed as one string.
+     */
+    fun splitDate(): Long? {
+        val day = lines.indexOfFirst { parseTimestamp(it) != null }.takeIf { it >= 0 } ?: return null
+        val clock = lines.drop(day).firstNotNullOfOrNull { CLOCK.find(it)?.value }.orEmpty()
+        return parseTimestamp("${lines[day]} $clock")
+    }
+
     /** The first `Rp …` anywhere, for receipts that state the amount in prose. */
     fun statedAmount(): Long? = lines.firstNotNullOfOrNull(::findAmount)
 
@@ -115,7 +132,7 @@ fun findAmount(text: String): Long? =
 
 /**
  * "11 Aug 2026, 10:30:27 WIB", "05 August 2026, 13:23 WIB",
- * "11 August 2026 19:56 WIB", "13 Agustus 2026 , 09:16:10".
+ * "11 August 2026 19:56 WIB", "13 Agustus 2026 , 09:16:10", "03-Agu-2026".
  *
  * The stated zone wins when there is one: a receipt saying 13:23 WIB means the
  * same instant wherever the phone happens to be. [fallbackZone] covers the rest.
@@ -157,10 +174,16 @@ fun detectType(vararg text: String): TransactionType {
 
 private val CURRENCY = Regex("(?:Rp|IDR)\\s*([\\d.,]+)", RegexOption.IGNORE_CASE)
 
-/** `11 Aug 2026, 10:30:27` — the time is optional, the seconds too. */
+/**
+ * `11 Aug 2026, 10:30:27` — the time is optional, the seconds too, and a hyphen
+ * groups the date as readily as a space ("03-Agu-2026", BNI).
+ */
 private val TIMESTAMP = Regex(
-    "(\\d{1,2})\\s+([A-Za-z]+)\\s+(\\d{4})(?:\\s*,?\\s*(\\d{1,2}):(\\d{2})(?::(\\d{2}))?)?",
+    "(\\d{1,2})[\\s-]+([A-Za-z]+)[\\s-]+(\\d{4})(?:\\s*,?\\s*(\\d{1,2}):(\\d{2})(?::(\\d{2}))?)?",
 )
+
+/** A clock, with the zone that qualifies it: "06:23:30 WIB", "10:53". */
+private val CLOCK = Regex("\\d{1,2}:\\d{2}(?::\\d{2})?(?:\\s*(?:WIB|WITA|WIT))?", RegexOption.IGNORE_CASE)
 
 // Longest first: WITA would otherwise be read as WIT.
 private val ZONE = Regex("\\b(WITA|WIB|WIT)\\b", RegexOption.IGNORE_CASE)

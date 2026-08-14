@@ -17,8 +17,10 @@ app release.
 
 | Provider | Emails it reads |
 |---|---|
+| Bank BNI | wondr receipts — QRIS, transfers, TapCash top ups |
 | Bank BRI | BRImo receipts — QRIS, transfers, BRIZZI top ups |
 | Bank Jago | payments, transfers, Jago Partner, debit card purchases |
+| Bank Mandiri | Livin' receipts — QR payments, e-money top ups, SBN orders |
 
 ## Layout
 

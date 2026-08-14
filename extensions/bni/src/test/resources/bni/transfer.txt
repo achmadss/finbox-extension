@@ -1,0 +1,26 @@
+Transfer berhasil!
+Hai, NAMA NASABAH
+Terima kasih sudah bertransaksi dengan wondr by BNI! Kamu baru aja transfer uang dengan detail sebagai berikut:
+Penerima
+NAMA PENERIMA -
+JAGO • 1098 **** 5039
+Sumber dana
+NAMA NASABAH
+TAPLUS • *****171
+Tanggal & waktu transaksi
+Tanggal 03-Agu-2026
+Waktu 06:23:30 WIB
+Nominal transaksi
+Nominal Rp20.000.000
+Biaya admin Rp2.500
+Total Rp20.002.500
+Metode transaksi
+Metode BI-FAST
+Tujuan transaksi Lainnya
+Lainnya
+Reference ID 20260803062319859497
+BIZ ID 20260803BNINIDJA010O0240198797
+Biaya transaksi sudah termasuk PPN (bila ada).
+PT Bank Negara Indonesia (Persero), Tbk.
+Butuh bantuan?
+BNI Call 1500046

@@ -1,0 +1,19 @@
+Pembayaran Berhasil
+Halo NAMA NASABAH,
+Berikut adalah detail transaksi Anda dengan QR:
+Penerima
+APOTEK KAWI JAYA BSD
+TANGSEL - ID
+Tanggal 27 Jul 2026
+Jam 15:22:45 WIB
+Nominal Transaksi Rp 41.000,00
+No. Referensi 2607271121582462322
+No. Ref. QRIS 607670955275
+Merchant PAN 9360001430019176673
+Customer PAN 9360000812122171348
+Pengakuisisi Bank BCA
+Terminal ID A2944245
+Sumber Dana
+NAMA NASABAH
+****7134
+Simpan email ini sebagai referensi transaksi Anda. Terima kasih telah bertransaksi di aplikasi Livin' by Mandiri.

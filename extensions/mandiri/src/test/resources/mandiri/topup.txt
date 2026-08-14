@@ -1,0 +1,15 @@
+Top-up e-money Berhasil
+Halo NAMA NASABAH ,
+Berikut adalah detail transaksi Anda:
+Penyedia Jasa
+e-money
+****3579
+Tanggal 28 Jul 2026
+Jam 07:57:27 WIB
+Nominal Top-up Rp 200.000,00
+Nomor Referensi 702607280757221223
+Rekening Sumber
+NAMA NASABAH
+****7134
+Segera update saldo di kartu bertambah. Update dapat dilakukan di perangkat ber-NFC, minimarket, atau ATM.
+Simpan email ini sebagai referensi transaksi Anda. Terima kasih telah bertransaksi di aplikasi Livin' by Mandiri.

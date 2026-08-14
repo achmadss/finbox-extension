@@ -30,5 +30,7 @@ includeBuild("build-logic")
 
 include(":compiler")
 include(":lib:receipt")
+include(":extensions:bni")
 include(":extensions:bri")
 include(":extensions:jago")
+include(":extensions:mandiri")
