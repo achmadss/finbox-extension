@@ -4,9 +4,11 @@ import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
+import dev.achmad.finbox.extension.TransactionKind
 import dev.achmad.finbox.extension.TransactionSource
+import dev.achmad.finbox.extension.TransactionType
 import dev.achmad.finbox.lib.receipt.Receipt
-import dev.achmad.finbox.lib.receipt.detectType
+import dev.achmad.finbox.lib.receipt.isIncome
 
 /**
  * Source for BRImo transaction receipts.
@@ -29,6 +31,8 @@ import dev.achmad.finbox.lib.receipt.detectType
  */
 @Source
 class BriSource : TransactionSource {
+
+    override val kinds = listOf(QRIS, BIFAST, TRANSFER, BRIZZI, INCOMING, OTHER)
 
     // Every BRImo notification comes from this one address, whatever the
     // transaction is. Subjects differ per type, so they are matched below.
@@ -61,7 +65,7 @@ class BriSource : TransactionSource {
                 date = receipt.date(*DATE) ?: email.date,
                 amount = amount,
                 currency = "IDR",
-                type = detectType(kind, email.subject),
+                kind = kindOf(kind, email.subject),
                 merchant = receipt.field(*MERCHANT),
                 description = kind.ifBlank { email.subject.trim() }.ifBlank { null },
                 reference = receipt.field(*REFERENCE),
@@ -69,7 +73,37 @@ class BriSource : TransactionSource {
         )
     }
 
+    /**
+     * Which kind a receipt is, from what BRI called it.
+     *
+     * Order is the whole trick: "Transfer BI-FAST" contains "transfer", so the
+     * narrower wording has to be tested before the broader one, and BRIZZI
+     * before either since a top up is worded as a purchase.
+     *
+     * Falls through to [OTHER] rather than guessing. BRI adds types without
+     * warning, and a transaction filed under a kind the user can see and switch
+     * off beats one silently booked as a transfer it wasn't.
+     */
+    private fun kindOf(vararg text: String): TransactionKind {
+        val joined = text.joinToString(" ").lowercase()
+        return when {
+            isIncome(*text) -> INCOMING
+            "brizzi" in joined -> BRIZZI
+            "qris" in joined -> QRIS
+            "bi-fast" in joined || "bifast" in joined -> BIFAST
+            "transfer" in joined || "pemindahan" in joined -> TRANSFER
+            else -> OTHER
+        }
+    }
+
     private companion object {
+        val QRIS = TransactionKind("QRIS", "QRIS Payment", TransactionType.EXPENSE)
+        val BIFAST = TransactionKind("TRANSFER_BI_FAST", "BI-Fast Transfer", TransactionType.EXPENSE)
+        val TRANSFER = TransactionKind("TRANSFER", "Transfer", TransactionType.EXPENSE)
+        val BRIZZI = TransactionKind("BRIZZI", "BRIZZI Top Up", TransactionType.EXPENSE)
+        val INCOMING = TransactionKind("INCOMING", "Incoming Transfer", TransactionType.INCOME)
+        val OTHER = TransactionKind("OTHER", "Other", TransactionType.EXPENSE)
+
         val AMOUNT = arrayOf("Nominal")
         val FEE = arrayOf("Biaya Admin")
         val TOTAL = arrayOf("Total Transaksi", "Total")

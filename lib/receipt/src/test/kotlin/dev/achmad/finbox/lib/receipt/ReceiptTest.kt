@@ -1,11 +1,12 @@
 package dev.achmad.finbox.lib.receipt
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -202,13 +203,16 @@ class ReceiptTest {
     }
 
     @Test
-    fun `the type is a guess from wording, and expense unless told otherwise`() {
-        assertEquals(TransactionType.EXPENSE, detectType("QRIS Bayar", "Pembelian QRIS Berhasil"))
-        assertEquals(TransactionType.EXPENSE, detectType("You have made a payment to BEl Shop"))
-        assertEquals(TransactionType.TRANSFER, detectType("Pemindahan Dana Sesama Rekening BRI"))
-        assertEquals(TransactionType.TRANSFER, detectType("You have transferred some money"))
-        assertEquals(TransactionType.INCOME, detectType("Dana masuk"))
+    fun `money coming in is recognised, and nothing else is mistaken for it`() {
+        assertTrue(isIncome("Dana masuk"))
+        assertTrue(isIncome("Transfer diterima"))
+        assertTrue(isIncome("You have received a payment"))
+        assertTrue(isIncome("Cashback Rp50.000"))
+
+        assertFalse(isIncome("QRIS Bayar", "Pembelian QRIS Berhasil"))
+        assertFalse(isIncome("You have made a payment to BEl Shop"))
+        assertFalse(isIncome("Pemindahan Dana Sesama Rekening BRI"))
         // "Termasuk" holds "masuk" but is not money coming in.
-        assertEquals(TransactionType.EXPENSE, detectType("Biaya Termasuk PPN"))
+        assertFalse(isIncome("Biaya Termasuk PPN"))
     }
 }

@@ -4,9 +4,11 @@ import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
+import dev.achmad.finbox.extension.TransactionKind
 import dev.achmad.finbox.extension.TransactionSource
+import dev.achmad.finbox.extension.TransactionType
 import dev.achmad.finbox.lib.receipt.Receipt
-import dev.achmad.finbox.lib.receipt.detectType
+import dev.achmad.finbox.lib.receipt.isIncome
 
 /**
  * Source for wondr by BNI receipts.
@@ -34,6 +36,8 @@ import dev.achmad.finbox.lib.receipt.detectType
 @Source
 class BniSource : TransactionSource {
 
+    override val kinds = listOf(QRIS, TOP_UP, TRANSFER, INCOMING, OTHER)
+
     // wondr notifies from this one address; the subject names the kind
     // ("Transfer berhasil!", "Top-up berhasil!", "Transaksi berhasil!").
     override val emailQuery = EmailQuery.from("wondr@bni.co.id")
@@ -57,7 +61,7 @@ class BniSource : TransactionSource {
                 date = receipt.splitDate() ?: email.date,
                 amount = amount,
                 currency = "IDR",
-                type = detectType(kind, email.subject),
+                kind = kindOf(kind, email.subject),
                 // Absent on a top up, which names the topped-up card instead.
                 // A transfer puts the recipient's alias in the same cell, so an
                 // unnamed one leaves a dash hanging off the end of the name.
@@ -68,7 +72,32 @@ class BniSource : TransactionSource {
         )
     }
 
+    /**
+     * Which kind a receipt is, from "Jenis transaksi" and the subject.
+     *
+     * Only QRIS states itself in the body; a top up and a transfer are named by
+     * the subject alone ("Top-up berhasil!", "Transfer berhasil!"), which is why
+     * both are passed in. Anything else falls to [OTHER] rather than being
+     * guessed at — wondr adds types without warning.
+     */
+    private fun kindOf(vararg text: String): TransactionKind {
+        val joined = text.joinToString(" ").lowercase()
+        return when {
+            isIncome(*text) -> INCOMING
+            "qris" in joined -> QRIS
+            "top-up" in joined || "top up" in joined -> TOP_UP
+            "transfer" in joined -> TRANSFER
+            else -> OTHER
+        }
+    }
+
     private companion object {
+        val QRIS = TransactionKind("QRIS", "QRIS Payment", TransactionType.EXPENSE)
+        val TOP_UP = TransactionKind("TOP_UP", "Top Up", TransactionType.EXPENSE)
+        val TRANSFER = TransactionKind("TRANSFER", "Transfer", TransactionType.EXPENSE)
+        val INCOMING = TransactionKind("INCOMING", "Incoming Transfer", TransactionType.INCOME)
+        val OTHER = TransactionKind("OTHER", "Other", TransactionType.EXPENSE)
+
         val TOTAL = arrayOf("Total")
         val REFERENCE = arrayOf("Reference ID", "Ref ID")
         val TYPE = arrayOf("Jenis transaksi")

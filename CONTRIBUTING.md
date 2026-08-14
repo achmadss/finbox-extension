@@ -35,6 +35,8 @@ annotated with `@Source`:
 @Source
 class JagoSource : TransactionSource {
 
+    override val kinds = listOf(PAYMENT, TRANSFER, OTHER)
+
     override val emailQuery = EmailQuery.from("noreply@jago.com")
 
     override fun isEmailForProvider(email: EmailMessage): Boolean { /* ... */ }
@@ -56,7 +58,24 @@ identity from the manifest instead. A source's id is derived from its name and
 The app shows it in the extension list, and `tools/update-repo.py` copies the
 192px one into `repo/icon/`.
 
-### The three members
+### The four members
+
+`kinds` is every type of transaction this source can produce, in your own
+vocabulary — `QRIS`, `TOP_UP`, `TRANSFER_BI_FAST`. The app knows only expense
+and income, so each kind says which it is; the app lists them on the extension's
+page with a switch each, and skips a transaction whose kind the user switched
+off.
+
+```kotlin
+val QRIS = TransactionKind("QRIS", "QRIS Payment", TransactionType.EXPENSE)
+```
+
+The `key` is stored with every transaction parsed under it and with the user's
+switch, so renaming one loses both — rename the display name instead. Always
+declare a catch-all (`OTHER`): banks add transaction types without warning, and
+a receipt you cannot classify should land somewhere visible rather than be
+guessed at. A kind you return but never declared is a switch the user can never
+reach, so test for that — every source test here does.
 
 `emailQuery` is what the app asks Gmail for. Narrow it to the sender the bank
 notifies from, and never put dates in it — the app adds its own window. It only
@@ -71,9 +90,10 @@ statements, OTPs and promotions from the same address as its receipts, and they
 must not reach the parser. Match on something a receipt always has and an
 advert never does — a reference number, a summary table.
 
-`parseEmail` returns what it reliably found. Return an empty list when the
-amount cannot be read: the app drops the email rather than storing a guess.
-Leave fields null rather than inventing them.
+`parseEmail` returns what it reliably found, each transaction tagged with one of
+your `kinds`. Return an empty list when the amount cannot be read: the app drops
+the email rather than storing a guess. Leave fields null rather than inventing
+them.
 
 ### What belongs here, and what doesn't
 
@@ -98,8 +118,13 @@ receipt.amount("Nominal")                     // "Rp 1.151.800" → 1151800
 receipt.date("Tanggal Transaksi")             // honours a stated WIB/WITA/WIT
 receipt.splitDate()                           // a day and a clock on two rows (BNI, Mandiri)
 receipt.statedAmount()                        // the first "Rp …" in prose
-detectType(kind, email.subject)               // INCOME / TRANSFER / EXPENSE
+isIncome(kind, email.subject)                 // money arriving rather than leaving
 ```
+
+`isIncome` is all the classifying the library does. Which *kind* a receipt is
+belongs in your source, as a `when` over the bank's own wording — a shared
+lookup table would have to know every bank's phrasing, and would quietly
+mis-file the first one it didn't.
 
 Two layouts are already handled: label and value on one line (BRI, BNI,
 Mandiri) and on two, with or without a colon (Jago). If a new bank breaks something here, fix it
@@ -120,8 +145,9 @@ and still reports success.
 
 Test against real emails. Save one as `src/test/resources/<provider>/<case>.txt`,
 flattened the way the app hands it over — one line per table row — with names
-and account numbers redacted, and assert the parsed amount, date, type and
-merchant. `BriSourceTest` and `JagoSourceTest` are worth copying. Cover each
+and account numbers redacted, and assert the parsed amount, date, kind and
+merchant. The fixtures are examples of real layouts, not a list of what the
+source supports: what it supports is whatever `kinds` declares. `BriSourceTest` and `JagoSourceTest` are worth copying. Cover each
 distinct layout the bank sends, and one email that must *not* be claimed.
 
 Plain JUnit on the JVM, no Android. Everything the plugin declares `compileOnly`

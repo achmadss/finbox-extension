@@ -1,7 +1,6 @@
 package dev.achmad.finbox.extension.mandiri
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlinx.coroutines.runBlocking
@@ -61,7 +60,7 @@ class MandiriSourceTest {
         // "Nominal Transaksi Rp 41.000,00" — a ledger in rupiah has no cents.
         assertEquals(41_000L, parsed.amount)
         assertEquals("IDR", parsed.currency)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("PAYMENT", parsed.kind?.key)
         assertEquals("APOTEK KAWI JAYA BSD", parsed.merchant)
         assertEquals(wib(2026, 7, 27, 15, 22, 45), parsed.date)
         // The QRIS reference on the line below must not win.
@@ -75,7 +74,7 @@ class MandiriSourceTest {
         }.single()
 
         assertEquals(200_000L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("TOP_UP", parsed.kind?.key)
         assertEquals("e-money", parsed.merchant)
         assertEquals(wib(2026, 7, 28, 7, 57, 27), parsed.date)
         assertEquals("702607280757221223", parsed.reference)
@@ -91,7 +90,7 @@ class MandiriSourceTest {
         }.single()
 
         assertEquals(100_000_000L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("SBN", parsed.kind?.key)
         assertEquals(arrived, parsed.date)
         assertNull(parsed.merchant)
         assertNull(parsed.reference)
@@ -111,5 +110,25 @@ class MandiriSourceTest {
         )
         assertFalse(source.isEmailForProvider(email("Kode OTP Livin' kamu adalah 123456.")))
         assertFalse(source.isEmailForProvider(email(fixture("qris"), from = "promo@tokopedia.com")))
+    }
+
+    @Test
+    fun `every kind a receipt parses to is one this source declares`() {
+        val declared = source.kinds.map { it.key }.toSet()
+        val parsed = runBlocking {
+            FIXTURES.flatMap { source.parseEmail(email(fixture(it.first), subject = it.second)) }
+        }
+
+        assertEquals(FIXTURES.size, parsed.size)
+        parsed.forEach { assertTrue("undeclared kind ${it.kind?.key}", it.kind?.key in declared) }
+    }
+
+    private companion object {
+        /** Every fixture with the subject its mail actually carries. */
+        val FIXTURES = listOf(
+            "qris" to "Pembayaran Berhasil!",
+            "topup" to "Top-up e-money Berhasil",
+            "sbn" to "Pemesanan SBN Berhasil!",
+        )
     }
 }

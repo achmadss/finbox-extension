@@ -1,7 +1,6 @@
 package dev.achmad.finbox.lib.receipt
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -163,14 +162,19 @@ fun parseTimestamp(text: String, fallbackZone: ZoneId = ZoneId.systemDefault()):
  * Expense unless something says otherwise, because that is what the great
  * majority of these emails are.
  */
-fun detectType(vararg text: String): TransactionType {
-    val joined = text.joinToString(" ")
-    return when {
-        INCOME.containsMatchIn(joined) -> TransactionType.INCOME
-        TRANSFER.containsMatchIn(joined) -> TransactionType.TRANSFER
-        else -> TransactionType.EXPENSE
-    }
-}
+/**
+ * Whether the text reads as money arriving rather than leaving.
+ *
+ * Only this much is shared. What a provider calls a transaction is the
+ * provider's own vocabulary and belongs in its source, which declares the kinds
+ * it can produce and maps its own wording onto them — a lookup table here would
+ * have to know every bank's phrasing, and would quietly mis-file the first one
+ * it didn't.
+ *
+ * Money in is the exception because every provider says it the same handful of
+ * ways, and getting it wrong flips the sign on the transaction.
+ */
+fun isIncome(vararg text: String): Boolean = INCOME.containsMatchIn(text.joinToString(" "))
 
 private val CURRENCY = Regex("(?:Rp|IDR)\\s*([\\d.,]+)", RegexOption.IGNORE_CASE)
 
@@ -209,6 +213,4 @@ private fun words(vararg words: String) =
 
 private val INCOME = words("masuk", "diterima", "kredit", "refund", "received", "incoming", "cashback")
 
-// "Pemindahan Dana" is BRI's wording for a transfer between accounts.
-private val TRANSFER = words("transfer", "pemindahan", "kirim")
 

@@ -4,9 +4,11 @@ import dev.achmad.finbox.extension.EmailMessage
 import dev.achmad.finbox.extension.EmailQuery
 import dev.achmad.finbox.extension.ParsedTransaction
 import dev.achmad.finbox.extension.Source
+import dev.achmad.finbox.extension.TransactionKind
 import dev.achmad.finbox.extension.TransactionSource
+import dev.achmad.finbox.extension.TransactionType
 import dev.achmad.finbox.lib.receipt.Receipt
-import dev.achmad.finbox.lib.receipt.detectType
+import dev.achmad.finbox.lib.receipt.isIncome
 
 /**
  * Source for Bank Jago notifications.
@@ -38,6 +40,8 @@ import dev.achmad.finbox.lib.receipt.detectType
 @Source
 class JagoSource : TransactionSource {
 
+    override val kinds = listOf(PAYMENT, TRANSFER, PARTNER, DEBIT_CARD, INCOMING, OTHER)
+
     override val emailQuery = EmailQuery.from("noreply@jago.com")
 
     override fun isEmailForProvider(email: EmailMessage): Boolean {
@@ -59,7 +63,7 @@ class JagoSource : TransactionSource {
                 currency = "IDR",
                 // The body says nothing about the kind of transaction, but the
                 // subject names it: "made a payment to", "made a transfer".
-                type = detectType(email.subject),
+                kind = kindOf(email.subject),
                 merchant = receipt.field(*MERCHANT)?.takeIf { summarised },
                 description = email.subject.trim().ifBlank { null },
                 reference = null,
@@ -80,16 +84,42 @@ class JagoSource : TransactionSource {
         // sale — so both are dropped rather than booked twice.
         lines.any { INVESTMENT.containsMatchIn(it) } -> null
         hasSummary() -> amount(*AMOUNT)
-        lines.any { DEBIT_CARD in it.lowercase() } -> statedAmount()
+        lines.any { DEBIT_CARD_LINE in it.lowercase() } -> statedAmount()
         else -> null
     }
 
     private fun Receipt.hasSummary(): Boolean =
         lines.any { it.startsWith(SUMMARY, ignoreCase = true) }
 
+    /**
+     * Which kind a transaction is, from the subject — the body never names it.
+     *
+     * A partner transaction ("via GoPay") is checked before a payment: Jago
+     * words some of them as payments too, and the partner is the more specific
+     * fact. Stock trades need no kind, since they never reach here.
+     */
+    private fun kindOf(vararg text: String): TransactionKind {
+        val joined = text.joinToString(" ").lowercase()
+        return when {
+            isIncome(*text) -> INCOMING
+            DEBIT_CARD_LINE in joined -> DEBIT_CARD
+            " via " in joined || "partner" in joined -> PARTNER
+            "transfer" in joined -> TRANSFER
+            "payment" in joined || "paid" in joined -> PAYMENT
+            else -> OTHER
+        }
+    }
+
     private companion object {
+        val PAYMENT = TransactionKind("PAYMENT", "Payment", TransactionType.EXPENSE)
+        val TRANSFER = TransactionKind("TRANSFER", "Transfer", TransactionType.EXPENSE)
+        val PARTNER = TransactionKind("PARTNER", "Partner Transaction", TransactionType.EXPENSE)
+        val DEBIT_CARD = TransactionKind("DEBIT_CARD", "Debit Card Purchase", TransactionType.EXPENSE)
+        val INCOMING = TransactionKind("INCOMING", "Incoming Transfer", TransactionType.INCOME)
+        val OTHER = TransactionKind("OTHER", "Other", TransactionType.EXPENSE)
+
         const val SUMMARY = "Transaction Summary"
-        const val DEBIT_CARD = "debit card"
+        const val DEBIT_CARD_LINE = "debit card"
 
         // Not "invest": every Jago footer says "from saving, transacting, to
         // investing", which would drop the lot.

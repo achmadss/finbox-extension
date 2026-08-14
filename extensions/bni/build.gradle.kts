@@ -5,7 +5,7 @@ plugins {
 finbox {
     name = "Bank BNI"
     provider = "bni"
-    versionCode = 1
+    versionCode = 2
 }
 
 dependencies {

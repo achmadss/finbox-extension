@@ -5,7 +5,7 @@ plugins {
 finbox {
     name = "Bank BRI"
     provider = "bri"
-    versionCode = 7
+    versionCode = 8
 }
 
 dependencies {

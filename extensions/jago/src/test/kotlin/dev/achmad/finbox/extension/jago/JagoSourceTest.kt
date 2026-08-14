@@ -1,7 +1,6 @@
 package dev.achmad.finbox.extension.jago
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlinx.coroutines.runBlocking
@@ -58,7 +57,7 @@ class JagoSourceTest {
 
         assertEquals(2_000L, parsed.amount)
         assertEquals("IDR", parsed.currency)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("PAYMENT", parsed.kind?.key)
         assertEquals("BEl Shop", parsed.merchant)
         assertEquals(millis(2026, 8, 5, 13, 23), parsed.date)
         // Jago sends no reference number of any kind.
@@ -74,7 +73,7 @@ class JagoSourceTest {
         }.single()
 
         assertEquals(34_000L, parsed.amount)
-        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("TRANSFER", parsed.kind?.key)
         assertEquals("NAMA PENERIMA", parsed.merchant)
         assertEquals(millis(2026, 7, 22, 13, 53), parsed.date)
     }
@@ -88,7 +87,7 @@ class JagoSourceTest {
         }.single()
 
         assertEquals(41_100L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("PARTNER", parsed.kind?.key)
         assertEquals("GoPay", parsed.merchant)
         assertEquals(millis(2026, 8, 11, 19, 56), parsed.date)
     }
@@ -107,7 +106,7 @@ class JagoSourceTest {
         }.single()
 
         assertEquals(33_189L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("DEBIT_CARD", parsed.kind?.key)
         assertEquals(arrived, parsed.date)
         // Nothing but an amount: no summary means no merchant to name.
         assertNull(parsed.merchant)
@@ -139,6 +138,27 @@ class JagoSourceTest {
         assertFalse(source.isEmailForProvider(email("Your Jago OTP is 123456.")))
         assertFalse(
             source.isEmailForProvider(email(fixture("payment"), from = "promo@tokopedia.com")),
+        )
+    }
+
+    @Test
+    fun `every kind a receipt parses to is one this source declares`() {
+        val declared = source.kinds.map { it.key }.toSet()
+        val parsed = runBlocking {
+            FIXTURES.flatMap { source.parseEmail(email(fixture(it.first), subject = it.second)) }
+        }
+
+        assertEquals(FIXTURES.size, parsed.size)
+        parsed.forEach { assertTrue("undeclared kind ${it.kind?.key}", it.kind?.key in declared) }
+    }
+
+    private companion object {
+        /** Every fixture with the subject its mail actually carries. */
+        val FIXTURES = listOf(
+            "payment" to "You have made a payment to BEl Shop",
+            "transfer" to "You have made a transfer",
+            "partner" to "You have made a transaction via GoPay",
+            "debitcard" to "You have made a transaction using your debit card",
         )
     }
 }

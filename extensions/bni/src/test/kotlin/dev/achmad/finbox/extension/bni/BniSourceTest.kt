@@ -1,7 +1,6 @@
 package dev.achmad.finbox.extension.bni
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlinx.coroutines.runBlocking
@@ -63,7 +62,7 @@ class BniSourceTest {
         // Rp20.000.000 sent, Rp2.500 admin: the total is what left the account.
         assertEquals(20_002_500L, parsed.amount)
         assertEquals("IDR", parsed.currency)
-        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("TRANSFER", parsed.kind?.key)
         assertEquals("NAMA PENERIMA", parsed.merchant)
         assertEquals(wib(2026, 8, 3, 6, 23, 30), parsed.date)
         assertEquals("20260803062319859497", parsed.reference)
@@ -74,7 +73,7 @@ class BniSourceTest {
         val parsed = runBlocking { source.parseEmail(email(fixture("qris"))) }.single()
 
         assertEquals(23_500L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("QRIS", parsed.kind?.key)
         assertEquals("QRIS INDOMARET", parsed.merchant)
         assertEquals("QRIS", parsed.description)
         assertEquals(wib(2026, 8, 11, 20, 43, 33), parsed.date)
@@ -88,7 +87,7 @@ class BniSourceTest {
         }.single()
 
         assertEquals(500_000L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("TOP_UP", parsed.kind?.key)
         // The card being topped up is not a payee.
         assertNull(parsed.merchant)
         assertEquals(wib(2026, 8, 5, 10, 53, 18), parsed.date)
@@ -109,5 +108,25 @@ class BniSourceTest {
         )
         assertFalse(source.isEmailForProvider(email("Kode OTP wondr kamu adalah 123456.")))
         assertFalse(source.isEmailForProvider(email(fixture("qris"), from = "promo@tokopedia.com")))
+    }
+
+    @Test
+    fun `every kind a receipt parses to is one this source declares`() {
+        val declared = source.kinds.map { it.key }.toSet()
+        val parsed = runBlocking {
+            FIXTURES.flatMap { source.parseEmail(email(fixture(it.first), subject = it.second)) }
+        }
+
+        assertEquals(FIXTURES.size, parsed.size)
+        parsed.forEach { assertTrue("undeclared kind ${it.kind?.key}", it.kind?.key in declared) }
+    }
+
+    private companion object {
+        /** Every fixture with the subject its mail actually carries. */
+        val FIXTURES = listOf(
+            "transfer" to "Transfer berhasil!",
+            "qris" to "Transaksi berhasil!",
+            "topup" to "Top-up berhasil!",
+        )
     }
 }

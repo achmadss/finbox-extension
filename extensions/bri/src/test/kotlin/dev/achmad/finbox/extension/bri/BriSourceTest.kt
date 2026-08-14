@@ -1,7 +1,6 @@
 package dev.achmad.finbox.extension.bri
 
 import dev.achmad.finbox.extension.EmailMessage
-import dev.achmad.finbox.extension.TransactionType
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlinx.coroutines.runBlocking
@@ -60,7 +59,7 @@ class BriSourceTest {
 
         assertEquals(13_000L, parsed.amount)
         assertEquals("IDR", parsed.currency)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("QRIS", parsed.kind?.key)
         assertEquals("Warkop Maharani", parsed.merchant)
         assertEquals("192779074268", parsed.reference)
         assertEquals(millis(2026, 8, 11, 10, 30, 27), parsed.date)
@@ -75,7 +74,7 @@ class BriSourceTest {
         }.single()
 
         assertEquals(30_000L, parsed.amount)
-        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("TRANSFER", parsed.kind?.key)
         assertEquals("NAMA PENERIMA", parsed.merchant)
         assertEquals("193865864645", parsed.reference)
         assertEquals(millis(2026, 8, 13, 9, 16, 10), parsed.date)
@@ -91,7 +90,7 @@ class BriSourceTest {
 
         // Nominal Rp1.000.000 plus Biaya Admin Rp2.500, which is the stated Total.
         assertEquals(1_002_500L, parsed.amount)
-        assertEquals(TransactionType.TRANSFER, parsed.type)
+        assertEquals("TRANSFER_BI_FAST", parsed.kind?.key)
         assertEquals("NAMA PENERIMA", parsed.merchant)
         assertEquals("180715421169", parsed.reference)
         assertEquals(millis(2026, 7, 21, 16, 40, 32), parsed.date)
@@ -104,7 +103,7 @@ class BriSourceTest {
         }.single()
 
         assertEquals(50_000L, parsed.amount)
-        assertEquals(TransactionType.EXPENSE, parsed.type)
+        assertEquals("BRIZZI", parsed.kind?.key)
         assertEquals("192685482301", parsed.reference)
         // No seconds in the header, so the minute is as precise as it gets.
         assertEquals(millis(2026, 8, 11, 7, 16, 0), parsed.date)
@@ -157,5 +156,26 @@ class BriSourceTest {
         }
 
         assertTrue(parsed.isEmpty())
+    }
+
+    @Test
+    fun `every kind a receipt parses to is one this source declares`() {
+        val declared = source.kinds.map { it.key }.toSet()
+        val parsed = runBlocking {
+            FIXTURES.flatMap { source.parseEmail(email(fixture(it.first), subject = it.second)) }
+        }
+
+        assertEquals(FIXTURES.size, parsed.size)
+        parsed.forEach { assertTrue("undeclared kind ${it.kind?.key}", it.kind?.key in declared) }
+    }
+
+    private companion object {
+        /** Every fixture with the subject its mail actually carries. */
+        val FIXTURES = listOf(
+            "qris" to "Pembelian QRIS Berhasil",
+            "transfer" to "Pemindahan Dana Sesama Rekening BRI",
+            "bifast" to "Pemindahan Dana Bank Lain Dalam Negeri",
+            "brizzi" to "Top Up BRIZZI Berhasil",
+        )
     }
 }

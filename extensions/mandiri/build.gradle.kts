@@ -5,7 +5,7 @@ plugins {
 finbox {
     name = "Bank Mandiri"
     provider = "mandiri"
-    versionCode = 1
+    versionCode = 2
 }
 
 dependencies {
