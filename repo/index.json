@@ -1,48 +1,48 @@
 {
-  "extensions": [
+  "parsers": [
     {
       "name": "Bank BNI",
       "provider": "bni",
-      "pkg": "dev.achmad.finbox.extension.bni",
+      "pkg": "dev.achmad.finbox.parser.bni",
       "version_code": 2,
-      "version_name": "1.5.2",
-      "lib_version": "1.5",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bni-1.5.2.apk",
-      "sha256": "e308b1d41ffc5895e25b0748cb4a1a0a52f122b87d3af7223122d8f3ed6fc6fa",
-      "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/bni.png"
+      "version_name": "1.6.2",
+      "lib_version": "1.6",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/apk/finbox-bni-1.6.2.apk",
+      "sha256": "aa65afb9ef48575c064b2026270e5ec319794f78a9b18419d065ed84537e263f",
+      "icon": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/icon/bni.png"
     },
     {
       "name": "Bank BRI",
       "provider": "bri",
-      "pkg": "dev.achmad.finbox.extension.bri",
+      "pkg": "dev.achmad.finbox.parser.bri",
       "version_code": 8,
-      "version_name": "1.5.8",
-      "lib_version": "1.5",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-bri-1.5.8.apk",
-      "sha256": "8843adaf89dc1b12c954f0cacc9e1c84de789292b44e3e5bbce794bff411cf96",
-      "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/bri.png"
+      "version_name": "1.6.8",
+      "lib_version": "1.6",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/apk/finbox-bri-1.6.8.apk",
+      "sha256": "2f61741d13273fefb9de42a490fc643f433cc56cf0665c1c037b4dc60b09557b",
+      "icon": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/icon/bri.png"
     },
     {
       "name": "Bank Jago",
       "provider": "jago",
-      "pkg": "dev.achmad.finbox.extension.jago",
+      "pkg": "dev.achmad.finbox.parser.jago",
       "version_code": 6,
-      "version_name": "1.5.6",
-      "lib_version": "1.5",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-jago-1.5.6.apk",
-      "sha256": "d0c2b8f29ae1830da6b6dd57fa6269abd5678dabc0bca9fce6b492c32c5185e4",
-      "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/jago.png"
+      "version_name": "1.6.6",
+      "lib_version": "1.6",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/apk/finbox-jago-1.6.6.apk",
+      "sha256": "c7eb63dc253a2b65e084543ed3409674a0e364d762c149fdb697859250473602",
+      "icon": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/icon/jago.png"
     },
     {
       "name": "Bank Mandiri",
       "provider": "mandiri",
-      "pkg": "dev.achmad.finbox.extension.mandiri",
+      "pkg": "dev.achmad.finbox.parser.mandiri",
       "version_code": 2,
-      "version_name": "1.5.2",
-      "lib_version": "1.5",
-      "apk": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/apk/finbox-mandiri-1.5.2.apk",
-      "sha256": "b9fcbd6933288ea7c5784cec01806fe8aec2630685db95735997c4569ec6a53d",
-      "icon": "https://raw.githubusercontent.com/achmadss/finbox-extension/main/repo/icon/mandiri.png"
+      "version_name": "1.6.2",
+      "lib_version": "1.6",
+      "apk": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/apk/finbox-mandiri-1.6.2.apk",
+      "sha256": "8b9e6246d092c8730ffeada8b4900db9c2ba7816aa342cab9210d49004bc676f",
+      "icon": "https://raw.githubusercontent.com/achmadss/finbox-parser/main/repo/icon/mandiri.png"
     }
   ]
 }
