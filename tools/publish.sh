@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 # Nothing gets published that does not parse.
 ./gradlew testDebugUnitTest "$@"
 
-# Only the extensions whose versionCode has no APK yet: a rebuild is not
+# Only the parsers whose versionCode has no APK yet: a rebuild is not
 # byte-identical, so rebuilding an already-published version would change its
 # sha256 under the app for no reason. Bump versionCode to republish.
 targets=$(python3 tools/update-repo.py --targets)
@@ -13,7 +13,7 @@ if [ -n "$targets" ]; then
     # shellcheck disable=SC2086
     ./gradlew $targets "$@"
 else
-    echo "Every extension is already published at its current versionCode."
+    echo "Every parser is already published at its current versionCode."
 fi
 
 # Always regenerate the index from the APKs in repo/apk: index.json carries each
@@ -23,4 +23,4 @@ python3 tools/update-repo.py
 
 echo ""
 echo "Done. Commit repo/apk/* and repo/index.json, then push:"
-echo "  git add repo && git commit -m 'Publish extensions' && git push"
+echo "  git add repo && git commit -m 'Publish parsers' && git push"

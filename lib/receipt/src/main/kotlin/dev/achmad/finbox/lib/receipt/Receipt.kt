@@ -1,6 +1,6 @@
 package dev.achmad.finbox.lib.receipt
 
-import dev.achmad.finbox.extension.EmailMessage
+import dev.achmad.finbox.parser.EmailMessage
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset

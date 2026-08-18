@@ -31,7 +31,7 @@ jobs:
       # Release APKs are signed with the debug config, and a runner makes itself
       # a fresh debug key on first use. Android refuses an update signed by a
       # different key than the installed APK, so the real one has to be restored
-      # or every published extension becomes uninstallable over the old one.
+      # or every published parser becomes uninstallable over the old one.
       - name: Restore the signing key
         env:
           DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
@@ -40,7 +40,7 @@ jobs:
           mkdir -p ~/.android
           echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
 
-      # Runs the tests, builds only the extensions with no APK for the version
+      # Runs the tests, builds only the parsers with no APK for the version
       # they currently declare, and regenerates the index.
       - run: ./tools/publish.sh
 
@@ -50,4 +50,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add repo
           # Nothing to say when the APKs and the index came out unchanged.
-          git diff --cached --quiet || { git commit -m "Publish extensions"; git push; }
+          git diff --cached --quiet || { git commit -m "Publish parsers"; git push; }

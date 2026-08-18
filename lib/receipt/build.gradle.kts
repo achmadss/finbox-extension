@@ -4,9 +4,9 @@ plugins {
     id("com.android.library")
 }
 
-// Bundled into each extension APK, not provided by the app: these are
+// Bundled into each parser APK, not provided by the app: these are
 // heuristics that change with every bank quirk, and pushing them through the
-// app's API would orphan every published extension each time.
+// app's API would orphan every published parser each time.
 android {
     namespace = "dev.achmad.finbox.lib.receipt"
     compileSdk = 36
@@ -31,7 +31,7 @@ kotlin {
 val apiVersion = providers.gradleProperty("finbox.apiVersion").get()
 
 dependencies {
-    // Same deal as an extension module: the app provides these at runtime.
+    // Same deal as a parser module: the app provides these at runtime.
     compileOnly("com.github.achmadss:finbox-android:$apiVersion")
     compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
     compileOnly("org.jsoup:jsoup:1.18.3")

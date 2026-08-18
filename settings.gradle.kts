@@ -24,13 +24,13 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "finbox-extension"
+rootProject.name = "finbox-parser"
 
 includeBuild("build-logic")
 
 include(":compiler")
 include(":lib:receipt")
-include(":extensions:bni")
-include(":extensions:bri")
-include(":extensions:jago")
-include(":extensions:mandiri")
+include(":parsers:bni")
+include(":parsers:bri")
+include(":parsers:jago")
+include(":parsers:mandiri")

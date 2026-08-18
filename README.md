@@ -1,9 +1,9 @@
-# finbox-extension
+# finbox-parser
 
 Parsers for [finbox](https://github.com/achmadss/finbox-android), the app that
 turns the receipts your bank emails you into a spending ledger.
 
-One provider, one APK. An extension holds nothing but the knowledge of how a
+One provider, one APK. A parser holds nothing but the knowledge of how a
 particular bank writes its notification mails: which address they come from,
 which of them are really transactions, and where the amount, date and merchant
 sit inside them. The app supplies the mailbox; a parser supplies the meaning.
@@ -26,9 +26,9 @@ app release.
 
 | Path | Purpose |
 |---|---|
-| `extensions/<provider>/` | One module per provider |
+| `parsers/<provider>/` | One module per provider |
 | `lib/receipt/` | Shared receipt reading — labels, money, dates — compiled into each APK |
-| `build-logic/` | The Gradle plugin every extension applies |
+| `build-logic/` | The Gradle plugin every parser applies |
 | `compiler/` | KSP processor that generates each APK's entry point |
 | `repo/` | Published APKs and the `index.json` the app fetches |
 | `tools/` | Publishing and API scripts |

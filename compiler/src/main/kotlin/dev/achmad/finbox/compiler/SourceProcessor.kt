@@ -13,15 +13,15 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 
-private const val SOURCE_ANNOTATION = "dev.achmad.finbox.extension.Source"
-private const val TRANSACTION_SOURCE = "dev.achmad.finbox.extension.TransactionSource"
+private const val SOURCE_ANNOTATION = "dev.achmad.finbox.parser.Source"
+private const val TRANSACTION_SOURCE = "dev.achmad.finbox.parser.TransactionSource"
 
-/** Must match GENERATED_CLASS in FinboxExtensionPlugin, which puts it in the manifest. */
-private const val GENERATED_PACKAGE = "dev.achmad.finbox.extension.generated"
+/** Must match GENERATED_CLASS in FinboxParserPlugin, which puts it in the manifest. */
+private const val GENERATED_PACKAGE = "dev.achmad.finbox.parser.generated"
 private const val GENERATED_CLASS = "GeneratedSource"
 
 /**
- * Re-exports the single `@Source` class in an extension module under a fixed,
+ * Re-exports the single `@Source` class in a parser module under a fixed,
  * predictable name.
  *
  * The indirection is what lets `finbox { }` drop `className`: the manifest can
@@ -47,15 +47,15 @@ class SourceProcessor(
         val decl = when {
             annotated.isEmpty() -> {
                 logger.error(
-                    "No @Source class found. Annotate this extension's entry point with " +
-                        "@dev.achmad.finbox.extension.Source.",
+                    "No @Source class found. Annotate this parser's entry point with " +
+                        "@dev.achmad.finbox.parser.Source.",
                 )
                 return emptyList()
             }
             annotated.size > 1 -> {
                 val names = annotated.joinToString { it.qualifiedName?.asString().orEmpty() }
                 logger.error(
-                    "Exactly one @Source class is allowed per extension, found ${annotated.size}: $names.",
+                    "Exactly one @Source class is allowed per parser, found ${annotated.size}: $names.",
                     annotated.first(),
                 )
                 return emptyList()
@@ -100,7 +100,7 @@ class SourceProcessor(
                 |// Generated from @Source on $fqn. Do not edit.
                 |package $GENERATED_PACKAGE
                 |
-                |import dev.achmad.finbox.extension.TransactionSource
+                |import dev.achmad.finbox.parser.TransactionSource
                 |
                 |class $GENERATED_CLASS : TransactionSource by $instance
                 |

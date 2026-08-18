@@ -12,9 +12,9 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        register("finbox-extension") {
-            id = "finbox.plugins.extension"
-            implementationClass = "dev.achmad.finbox.gradle.FinboxExtensionPlugin"
+        register("finbox-parser") {
+            id = "finbox.plugins.parser"
+            implementationClass = "dev.achmad.finbox.gradle.FinboxParserPlugin"
         }
     }
 }

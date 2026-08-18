@@ -1,6 +1,6 @@
 package dev.achmad.finbox.lib.receipt
 
-import dev.achmad.finbox.extension.EmailMessage
+import dev.achmad.finbox.parser.EmailMessage
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals

@@ -10,10 +10,10 @@ it does that.
 
 ## Add a source
 
-**1. Create the module.** `extensions/<provider>/build.gradle.kts`:
+**1. Create the module.** `parsers/<provider>/build.gradle.kts`:
 
 ```kotlin
-plugins { id("finbox.plugins.extension") }
+plugins { id("finbox.plugins.parser") }
 
 finbox {
     name = "Bank Jago"
@@ -28,7 +28,7 @@ dependencies {
 
 Register it in `settings.gradle.kts`.
 
-**2. Implement `TransactionSource`** in `dev.achmad.finbox.extension.<provider>`,
+**2. Implement `TransactionSource`** in `dev.achmad.finbox.parser.<provider>`,
 annotated with `@Source`:
 
 ```kotlin
@@ -55,14 +55,14 @@ identity from the manifest instead. A source's id is derived from its name and
 `versionCode`, so both are part of your published contract.
 
 **3. Add a launcher icon** at `src/main/res/mipmap-<density>/ic_launcher.png`.
-The app shows it in the extension list, and `tools/update-repo.py` copies the
+The app shows it in the parser list, and `tools/update-repo.py` copies the
 192px one into `repo/icon/`.
 
 ### The four members
 
 `kinds` is every type of transaction this source can produce, in your own
 vocabulary — `QRIS`, `TOP_UP`, `TRANSFER_BI_FAST`. The app knows only expense
-and income, so each kind says which it is; the app lists them on the extension's
+and income, so each kind says which it is; the app lists them on the parser's
 page with a switch each, and skips a transaction whose kind the user switched
 off.
 
@@ -97,7 +97,7 @@ them.
 
 ### What belongs here, and what doesn't
 
-An extension holds the knowledge of one bank's emails. It never fetches, never
+A parser holds the knowledge of one bank's emails. It never fetches, never
 schedules, never touches a token or an HTTP client — the app owns all of that,
 and hands over an `EmailMessage`.
 
@@ -107,7 +107,7 @@ your call, and `:lib:receipt` does it.
 
 ## Use the receipt library
 
-`lib/receipt` is shared by every extension and compiled into each APK. It
+`lib/receipt` is shared by every parser and compiled into each APK. It
 covers what banks have in common:
 
 ```kotlin
@@ -130,14 +130,14 @@ Two layouts are already handled: label and value on one line (BRI, BNI,
 Mandiri) and on two, with or without a colon (Jago). If a new bank breaks something here, fix it
 here — that is why it is a library and not copied into each parser.
 
-Anything genuinely shared belongs in `lib/`, never in `extension-api`. The API
-is provided by the app, so moving it orphans published extensions; a library
-ships inside your APK and costs a release of that extension alone.
+Anything genuinely shared belongs in `lib/`, never in `parser-api`. The API
+is provided by the app, so moving it orphans published parsers; a library
+ships inside your APK and costs a release of that parser alone.
 
 ## Test
 
 ```bash
-./gradlew :extensions:<provider>:testDebugUnitTest
+./gradlew :parsers:<provider>:testDebugUnitTest
 ```
 
 Note `testDebugUnitTest`, not `test` — in an Android module `test` runs nothing
@@ -158,7 +158,7 @@ supply it.
 
 ```bash
 ./tools/publish.sh
-git add repo && git commit -m "Publish extensions" && git push
+git add repo && git commit -m "Publish parsers" && git push
 ```
 
 That runs the tests, builds the release APKs that are missing, and regenerates
@@ -170,16 +170,16 @@ Missing is decided by name. The plugin writes
 `repo/apk/finbox-<provider>-<apiVersion>.<versionCode>.apk`, so what gets built
 follows from the two things that name it:
 
-- **Bump `versionCode`** in `finbox {}` and that extension alone is rebuilt. Do
+- **Bump `versionCode`** in `finbox {}` and that parser alone is rebuilt. Do
   it for every published change, including one that only touches `lib/receipt`,
   since that is compiled into your APK.
-- **Bump `finbox.apiVersion`** and every extension is rebuilt, which is what an
+- **Bump `finbox.apiVersion`** and every parser is rebuilt, which is what an
   API change means — they are all compiled against it.
 - **Change neither** and nothing is built. That is the point: an untouched
   version keeps the sha256 the app already knows.
 
 Anything left in `repo/apk/` that no module currently declares is deleted, so a
-superseded APK cannot publish the same extension twice.
+superseded APK cannot publish the same parser twice.
 
 Or let CI do it — Actions → **Publish** → Run workflow, or `gh workflow run
 publish.yml`. It runs the same script and commits `repo/`. Deliberately manual:
@@ -189,18 +189,18 @@ The workflow restores the debug keystore from the `DEBUG_KEYSTORE` secret
 (`base64 -i ~/.android/debug.keystore | gh secret set DEBUG_KEYSTORE`). Release
 APKs are signed with the debug config, and Android refuses an update signed by a
 different key than the installed APK, so a runner's own generated key would make
-every published extension uninstallable over the old one.
+every published parser uninstallable over the old one.
 
 ## Versions
 
 `finbox.apiVersion` in `gradle.properties` is the parser API to build against.
-It becomes the APK's `finbox.extension.lib` metadata and the leading part of
+It becomes the APK's `finbox.parser.lib` metadata and the leading part of
 its `versionName` (`1.4.7` = API 1.4, versionCode 7).
 
 The app loads anything from its `MIN_LIB_VERSION` up to the version it ships.
-Additions to the API raise only the ceiling, so published extensions keep
+Additions to the API raise only the ceiling, so published parsers keep
 working; a change that breaks them raises the floor and every APK below it must
-be rebuilt. If your extension stops loading after an app update, that is what
+be rebuilt. If your parser stops loading after an app update, that is what
 happened — rebuild against the new `finbox.apiVersion` and republish.
 
 Changing the API itself lives in finbox-android. Push it there, then set
